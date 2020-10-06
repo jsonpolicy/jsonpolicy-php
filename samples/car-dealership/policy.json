@@ -1,0 +1,22 @@
+{
+    "Statement": [
+        {
+            "Effect": "deny",
+            "Resource": "Car",
+            "Action": "*"
+        },
+        {
+            "Effect": "allow",
+            "Resource": "Car",
+            "Action": "purchase",
+            "Condition": {
+                "LessOrEquals": {
+                    "${RESOURCE.price}": 30000
+                }
+            }
+        }
+    ],
+    "Assignee": [
+        "anonymous"
+    ]
+}

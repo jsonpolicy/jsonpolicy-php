@@ -1,0 +1,17 @@
+[
+    {
+        "model": "BMW 228i",
+        "year": 2014,
+        "price": 52000
+    },
+    {
+        "model": "Volvo XC90",
+        "year": 2018,
+        "price": 49000
+    },
+    {
+        "model": "Camry Hybrid",
+        "year": 2020,
+        "price": 28430
+    }
+]

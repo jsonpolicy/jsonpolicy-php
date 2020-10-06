@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<phpunit
+    backupGlobals="false"
+    colors="true"
+    convertErrorsToExceptions="true"
+    convertNoticesToExceptions="true"
+    convertWarningsToExceptions="true"
+>
+    <testsuites>
+        <testsuite name="Core">
+            <directory suffix="Test.php">./tests/Core</directory>
+        </testsuite>
+        <testsuite name="Facade">
+            <file>./tests/FacadeTest.php</file>
+        </testsuite>
+    </testsuites>
+</phpunit>
