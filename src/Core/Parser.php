@@ -9,20 +9,39 @@
 
 namespace JsonPolicy\Core;
 
-use JsonPolicy\Facade;
+use JsonPolicy\Manager;
 
-class Manager
+/**
+ * Policy parser
+ *
+ * @version 0.0.1
+ */
+class Parser
 {
 
     /**
-     * Parent Façade
+     * Parent policy manager
      *
-     * @var JsonPolicy\Facade
+     * @var JsonPolicy\Manager
      *
-     * @access protected
+     * @access private
      * @version 0.0.1
      */
-    protected $facade;
+    private $_manager;
+
+    /**
+     * Collection of parsers
+     *
+     * @var array
+     *
+     * @access private
+     * @version 0.0.01
+     */
+    private $_parser = array(
+        'marker'    => null,
+        'typecast'  => null,
+        'condition' => null
+    );
 
     /**
      * Parsed policy tree
@@ -32,7 +51,7 @@ class Manager
      * @access protected
      * @version 0.0.1
      */
-    protected $tree = array(
+    private $_tree = array(
         'Statement' => array(),
         'Param'     => array()
     );
@@ -40,23 +59,21 @@ class Manager
     /**
      * Constructor
      *
-     * @param JsonPolicy\Facade $facade
-     * @param array             $policies
+     * @param array              $policies
+     * @param JsonPolicy\Manager $manager
      *
      * @access protected
      *
      * @return void
      * @version 0.0.1
      */
-    public function __construct(Facade $facade, array $policies = [])
+    public function __construct(array $policies, Manager $manager)
     {
-        $this->facade = $facade;
+        $this->_manager = $manager;
 
         foreach ($policies as $policy) {
             $this->updatePolicyTree($this->parsePolicy($policy));
         }
-
-        $this->_cleanupTree($this->tree['Statement']);
     }
 
     /**
@@ -74,10 +91,10 @@ class Manager
     {
         $value = null;
 
-        if (isset($this->tree['Param'][$name])) {
-            $param = $this->tree['Param'][$name];
+        if (isset($this->_tree['Param'][$name])) {
+            $param = $this->_tree['Param'][$name];
 
-            if ($this->isApplicable($param, $args)) {
+            if ($this->_isApplicable($param, $args)) {
                 $value = $param['Value'];
             }
         }
@@ -95,9 +112,9 @@ class Manager
      * @access public
      * @version 0.0.1
      */
-    public function hasResource($resource)
+    public function isDefined($resource)
     {
-        return isset($this->tree['Statement'][$resource]);
+        return isset($this->_tree['Statement'][$resource]);
     }
 
     /**
@@ -106,42 +123,100 @@ class Manager
      * This method is working with "Statement" array.
      *
      * @param string $resource Resource name
-     * @param mixed  $args     Args that will be injected during condition evaluation
+     * @param string $effect   Constraint effect
+     * @param array  $context  Evaluation context
      *
      * @return boolean|null
      *
      * @access public
      * @version 0.0.1
      */
-    public function isAllowed($resource, $args = null)
+    public function is($resource, $effect, $context)
     {
-        $allowed = null;
+        $result = null;
 
-        if (isset($this->tree['Statement'][$resource])) {
+        if ($this->isDefined($resource)) {
             $stm = $this->getCandidateStatement(
-                $this->tree['Statement'][$resource], $args
+                $this->_tree['Statement'][$resource], $context
             );
 
             if (!is_null($stm)) {
-                $allowed = ($stm['Effect'] === 'allow');
+                $result = ($stm['Effect'] === $effect);
             }
         }
 
-        return $allowed;
+        return $result;
+    }
+
+    /**
+     * Get marker parser
+     *
+     * @return Marker
+     *
+     * @access public
+     * @version 0.0.1
+     */
+    public function getMarkerParser()
+    {
+        if (is_null($this->_parser['marker'])) {
+            $this->_parser['marker'] = new Marker(
+                $this, $this->_manager->getSetting('markers')
+            );
+        }
+
+        return $this->_parser['marker'];
+    }
+
+    /**
+     * Get typecast parser
+     *
+     * @return Typecast
+     *
+     * @access public
+     * @version 0.0.1
+     */
+    public function getTypecastParser()
+    {
+        if (is_null($this->_parser['typecast'])) {
+            $this->_parser['typecast'] = new Typecast(
+                $this, $this->_manager->getSetting('typecasts')
+            );
+        }
+
+        return $this->_parser['typecast'];
+    }
+
+    /**
+     * Get condition parser
+     *
+     * @return Condition
+     *
+     * @access public
+     * @version 0.0.1
+     */
+    public function getConditionParser()
+    {
+        if (is_null($this->_parser['condition'])) {
+            $this->_parser['condition'] = new Condition(
+                $this, $this->_manager->getSetting('conditions')
+            );
+        }
+
+        return $this->_parser['condition'];
     }
 
     /**
      * Based on multiple competing statements, get the best candidate
      *
      * @param array $statements
-     * @param array $args
+     * @param array $context
      *
      * @return array|null
      *
      * @access protected
      * @version 0.0.1
      */
-    protected function getCandidateStatement($statements, $args = array())
+    protected function getCandidateStatement($statements, array $context)
     {
         $candidate = null;
 
@@ -151,7 +226,7 @@ class Manager
             $enforced = false;
 
             foreach($statements as $stm) {
-                if ($this->isApplicable($stm, $args)) {
+                if ($this->_isApplicable($stm, $context)) {
                     if (!empty($stm['Enforce'])) {
                         $candidate = $stm;
                         $enforced  = true;
@@ -160,7 +235,7 @@ class Manager
                     }
                 }
             }
-        } else if ($this->isApplicable($statements, $args)) {
+        } else if ($this->_isApplicable($statements, $context)) {
             $candidate = $statements;
         }
 
@@ -224,8 +299,8 @@ class Manager
      */
     protected function updatePolicyTree($addition)
     {
-        $stmts  = &$this->tree['Statement'];
-        $params = &$this->tree['Param'];
+        $stmts  = &$this->_tree['Statement'];
+        $params = &$this->_tree['Param'];
 
         // Step #1. If there are any params, let's index them and insert into the list
         foreach ($addition['Param'] as $param) {
@@ -289,18 +364,15 @@ class Manager
 
         // Allow to build resource name or param key dynamically.
         if (preg_match('/^(.*)[\s]+(map to|=>)[\s]+(.*)$/i', $key, $match)) {
-
-            // e.g. "Term:category:%s:posts => ${USER_META.regions}"
-            // e.g. "%s:default:category => ${HTTP_POST.post_types}"
-            $values = (array) Marker::getTokenValue($match[3]);
+            $values = (array) $this->getMarkerParser()->getTokenValue($match[3]);
 
             // Create the map of resources/params and replace
             foreach($values as $value) {
                 $response[] = sprintf($match[1], $value);
             }
         } elseif (preg_match_all('/(\$\{[^}]+\})/', $key, $match)) {
-            // e.g. "Term:category:${USER_META.region}:posts"
-            $response = array(Marker::evaluate($key, $match[1]));
+            $tokens   = (is_iterable($match[1]) ? $match[1] : []);
+            $response = array($this->getMarkerParser()->evaluate($key, $tokens));
         } else {
             $response = array($key);
         }
@@ -358,10 +430,10 @@ class Manager
     private function _replaceTokensInString($token, $type_cast = false)
     {
         if (preg_match_all('/(\$\{[^}]+\})/', $token, $match)) {
-            $value = Marker::evaluate($token, $match[1]);
+            $value = $this->getMarkerParser()->evaluate($token, $match[1]);
 
             if ($type_cast === true) {
-                $replaced = Typecast::execute($value);
+                $replaced = $this->getTypecastParser()->cast($value);
             } else {
                 $replaced = $value;
             }
@@ -373,48 +445,24 @@ class Manager
     }
 
     /**
-     * Perform some internal clean-up
+     * Check if policy statement is applicable
      *
-     * @param array &$statements
-     *
-     * @return void
-     *
-     * @access private
-     * @version 0.0.1
-     */
-    private function _cleanupTree(&$statements)
-    {
-        foreach($statements as $id => &$stm) {
-            if (is_array($stm) && isset($stm[0])) {
-                $this->_cleanupTree($stm);
-            } else {
-                if (isset($stm['Resource'])) {
-                    unset($statements[$id]['Resource']);
-                }
-                if (isset($stm['Action'])) {
-                    unset($statements[$id]['Action']);
-                }
-            }
-        }
-    }
-
-    /**
-     * Check if policy block is applicable
-     *
-     * @param array $block
+     * @param array $stmt
      * @param array $args
      *
      * @return boolean
      *
-     * @access protected
+     * @access private
      * @version 0.0.1
      */
-    protected function isApplicable($block, $args = array())
+    private function _isApplicable($stmt, array $context)
     {
         $result = true;
 
-        if (!empty($block['Condition']) && is_array($block['Condition'])) {
-            $result = Condition::evaluate($block['Condition'], $args);
+        if (!empty($stmt['Condition']) && is_array($stmt['Condition'])) {
+            $result = $this->getConditionParser()->evaluate(
+                $stmt['Condition'], $context
+            );
         }
 
         return $result;

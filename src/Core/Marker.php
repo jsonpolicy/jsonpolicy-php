@@ -16,25 +16,52 @@ class Marker
 {
 
     /**
+     * Parent policy parser
+     *
+     * @var Parser
+     *
+     * @access private
+     * @version 0.0.1
+     */
+    private $_parser;
+
+    /**
      * Literal map token's type to the executable method that returns actual value
      *
      * @var array
      *
-     * @access protected
+     * @access private
      * @version 0.0.1
      */
-    protected static $map = array(
-        'IDENTITY'          => __CLASS__ . '::getIdentityValue',
-        'DATETIME'          => __CLASS__ . '::getDatetime',
-        'HTTP_GET'          => __CLASS__ . '::getQueryParam',
-        'HTTP_POST'         => __CLASS__ . '::getPostParam',
-        'HTTP_COOKIE'       => __CLASS__ . '::getCookieParam',
-        'PHP_SERVER'        => __CLASS__ . '::getServerParam',
-        'PHP_GLOBAL'        => __CLASS__ . '::getGlobalVariable',
-        'RESOURCE'          => __CLASS__ . '::getResourceValue',
-        'PHP_ENV'           => 'getenv',
-        'PHP_CONST'         => __CLASS__ . '::getConstant'
+    private $_map = array(
+        'IDENTITY'    => __CLASS__ . '::getIdentityValue',
+        'DATETIME'    => __CLASS__ . '::getDatetime',
+        'HTTP_GET'    => __CLASS__ . '::getQueryParam',
+        'HTTP_POST'   => __CLASS__ . '::getPostParam',
+        'HTTP_COOKIE' => __CLASS__ . '::getCookieParam',
+        'PHP_SERVER'  => __CLASS__ . '::getServerParam',
+        'PHP_GLOBAL'  => __CLASS__ . '::getGlobalVariable',
+        'CONTEXT'     => __CLASS__ . '::getContextValue',
+        'PHP_ENV'     => 'getenv',
+        'PHP_CONST'   => __CLASS__ . '::getConstant'
     );
+
+    /**
+     * Construct the marker parser
+     *
+     * @param Parser $parser Parent policy parser
+     * @param array  $map    Collection of additional markers
+     *
+     * @return void
+     *
+     * @access public
+     * @version 0.0.1
+     */
+    public function __construct(Parser $parser, array $map = [])
+    {
+        $this->_parser = $parser;
+        $this->_map    = array_merge($this->_map, $map);
+    }
 
     /**
      * Evaluate collection of tokens and replace them with values
@@ -48,10 +75,10 @@ class Marker
      * @access public
      * @version 0.0.1
      */
-    public static function evaluate($part, array $tokens, array $context)
+    public function evaluate($part, array $tokens, array $context = [])
     {
         foreach ($tokens as $token) {
-            $val  = self::getTokenValue($token, $context);
+            $val  = $this->getTokenValue($token, $context);
             $part = str_replace(
                 $token,
                 (is_scalar($val) || is_null($val) ? $val : json_encode($val)),
@@ -73,12 +100,12 @@ class Marker
      * @access public
      * @version 0.0.1
      */
-    public static function getTokenValue($token, $context = array())
+    public function getTokenValue($token, array $context = [])
     {
         $parts = explode('.', preg_replace('/^\$\{([^}]+)\}$/', '${1}', $token), 2);
 
-        if (isset(self::$map[$parts[0]])) {
-            $value = call_user_func(self::$map[$parts[0]], $parts[1], $context);
+        if (isset($this->_map[$parts[0]])) {
+            $value = call_user_func($this->_map[$parts[0]], $parts[1], $context);
         } else {
             $value = null;
         }
@@ -87,22 +114,7 @@ class Marker
     }
 
     /**
-     * Get USER's value
-     *
-     * @param string $prop
-     *
-     * @return mixed
-     *
-     * @access protected
-     * @version 0.0.1
-     */
-    protected static function getIdentityValue($prop)
-    {
-        return null;
-    }
-
-    /**
-     * Get inline argument
+     * Get value from the identity object
      *
      * @param string $prop
      * @param array  $context
@@ -112,21 +124,25 @@ class Marker
      * @access protected
      * @version 0.0.1
      */
-    protected static function getResourceValue($prop, $context)
+    protected static function getIdentityValue($prop, array $context)
     {
-        $value = null;
+        return self::_getValueByXPath($context['Manager']->getIdentity(), $prop);
+    }
 
-        if (is_object($context['resource'])) {
-            if (property_exists($context['resource'], $prop)) {
-                $value = $context['resource']->{$prop};
-            }
-        } elseif (is_array($context['resource'])) {
-            if (array_key_exists($prop, $context['resource'])) {
-                $value = $context['resource'][$prop];
-            }
-        }
-
-        return $value;
+    /**
+     * Get value from the context args
+     *
+     * @param string $prop
+     * @param array  $context
+     *
+     * @return mixed
+     *
+     * @access protected
+     * @version 0.0.1
+     */
+    protected static function getContextValue($prop, array $context)
+    {
+        return self::_getValueByXPath($context, $prop);
     }
 
     /**
@@ -142,21 +158,6 @@ class Marker
     protected static function getConstant($const)
     {
         return (defined($const) ? constant($const) : null);
-    }
-
-    /**
-     * Get access policy param
-     *
-     * @param string $param
-     *
-     * @return mixed
-     *
-     * @access protected
-     * @version 0.0.1
-     */
-    protected static function getParam($param)
-    {
-        return null;
     }
 
     /**
@@ -187,6 +188,50 @@ class Marker
     protected static function getGlobalVariable($var)
     {
         return (isset($GLOBALS[$var]) ? $GLOBALS[$var] : null);
+    }
+
+    /**
+     * Get value by xpath
+     *
+     * This method supports multiple different path
+     *
+     * @param mixed  $obj
+     * @param string $xpath
+     *
+     * @return mixed
+     *
+     * @access private
+     * @version 0.0.1
+     */
+    private static function _getValueByXPath($obj, $xpath)
+    {
+        $value = $obj;
+        $path  = trim(
+            str_replace(
+                array('["', '[', '"]', ']', '..'), '.', $xpath
+            ),
+            '\s.'
+        );
+
+        foreach(explode('.', $path) as $l) {
+            if (is_object($value)) {
+                if (property_exists($value, $l)) {
+                    $value = $value->{$l};
+                } else {
+                    $value = null;
+                    break;
+                }
+            } else if (is_array($value)) {
+                if (array_key_exists($l, $value)) {
+                    $value = $value[$l];
+                } else {
+                    $value = null;
+                    break;
+                }
+            }
+        }
+
+        return $value;
     }
 
 }

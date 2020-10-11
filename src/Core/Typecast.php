@@ -16,6 +16,43 @@ class Typecast
 {
 
     /**
+     * Parent policy parser
+     *
+     * @var Parser
+     *
+     * @access private
+     * @version 0.0.1
+     */
+    private $_parser;
+
+    /**
+     * Collection of additional types
+     *
+     * @var array
+     *
+     * @access private
+     * @version 0.0.1
+     */
+    private $_map = [];
+
+    /**
+     * Construct the marker parser
+     *
+     * @param Parser $parser Parent policy parser
+     * @param array  $map    Collection of additional markers
+     *
+     * @return void
+     *
+     * @access public
+     * @version 0.0.1
+     */
+    public function __construct(Parser $parser, array $map = [])
+    {
+        $this->_parser = $parser;
+        $this->_map    = array_merge($this->_map, $map);
+    }
+
+    /**
      * Execute type casting
      *
      * @param string $expression
@@ -25,7 +62,7 @@ class Typecast
      * @access public
      * @version 0.0.1
      */
-    public static function execute($expression)
+    public function cast($expression)
     {
         $regex = '/^\(\*([a-z\d\-_]+)\)(.*)/i';
 
@@ -34,7 +71,7 @@ class Typecast
 
         // If there is type casting, perform it
         if (preg_match( $regex, $expression, $scale)) {
-            $expression = self::_typecast($scale[2], $scale[1]);
+            $expression = $this->_typecast($scale[2], $scale[1]);
         }
 
         return $expression;
@@ -52,9 +89,9 @@ class Typecast
      * @access protected
      * @version 0.0.1
      */
-    private static function _typecast($value, $type)
+    private function _typecast($value, $type)
     {
-        switch (strtolower($type)) {
+        switch ($type) {
             case 'string':
                 $value = (string) $value;
                 break;
@@ -85,6 +122,13 @@ class Typecast
                 break;
 
             default:
+                if (isset($this->_map[$type])) {
+                    if (is_callable($this->_map[$type])) {
+                        $value = call_user_func($this->_map[$type], $value);
+                    } else {
+                        throw new \Error("The {$type} typecast is not callable");
+                    }
+                }
                 break;
         }
 

@@ -13,58 +13,87 @@ class Condition
 {
 
     /**
+     * Parent policy parser
+     *
+     * @var Parser
+     *
+     * @access private
+     * @version 0.0.1
+     */
+    private $_parser;
+
+    /**
      * Map between condition type and method that evaluates the
      * group of conditions
      *
      * @var array
      *
-     * @access protected
+     * @access private
      * @version 0.0.1
      */
-    protected static $map = array(
-        'between'         => 'evaluateBetweenConditions',
-        'equals'          => 'evaluateEqualsConditions',
-        'notequals'       => 'evaluateNotEqualsConditions',
-        'greater'         => 'evaluateGreaterConditions',
-        'less'            => 'evaluateLessConditions',
-        'greaterorequals' => 'evaluateGreaterOrEqualsConditions',
-        'lessorequals'    => 'evaluateLessOrEqualsConditions',
-        'in'              => 'evaluateInConditions',
-        'notin'           => 'evaluateNotInConditions',
-        'like'            => 'evaluateLikeConditions',
-        'notlike'         => 'evaluateNotLikeConditions',
-        'regex'           => 'evaluateRegexConditions'
+    private $_map = array(
+        'Between'         => 'evaluateBetweenConditions',
+        'Equals'          => 'evaluateEqualsConditions',
+        'NotEquals'       => 'evaluateNotEqualsConditions',
+        'Greater'         => 'evaluateGreaterConditions',
+        'Less'            => 'evaluateLessConditions',
+        'GreaterOrEquals' => 'evaluateGreaterOrEqualsConditions',
+        'LessOrEquals'    => 'evaluateLessOrEqualsConditions',
+        'In'              => 'evaluateInConditions',
+        'NotIn'           => 'evaluateNotInConditions',
+        'Like'            => 'evaluateLikeConditions',
+        'NotLike'         => 'evaluateNotLikeConditions',
+        'Regex'           => 'evaluateRegexConditions'
     );
+
+    /**
+     * Construct the condition parser
+     *
+     * @param Parser $parser Parent policy parser
+     * @param array  $map    Collection of additional conditions
+     *
+     * @return void
+     *
+     * @access public
+     * @version 0.0.1
+     */
+    public function __construct(Parser $parser, array $map = [])
+    {
+        $this->_parser = $parser;
+        $this->_map    = array_merge($this->_map, $map);
+    }
 
     /**
      * Evaluate the group of conditions based on type
      *
      * @param array $conditions List of conditions
-     * @param array $args       Inline args for evaluation
+     * @param array $context    Context
      *
      * @return boolean
      *
      * @access public
      * @version 0.0.1
      */
-    public static function evaluate($conditions, $args = array())
+    public function evaluate($conditions, array $context)
     {
         $res = true;
 
         foreach ($conditions as $type => $condition) {
-            $type = strtolower($type);
-
-            if (isset(self::$map[$type])) {
-                $callback = __CLASS__ . "::" . self::$map[$type];
+            if (isset($this->_map[$type])) {
+                if (method_exists($this, $this->_map[$type])) {
+                    $callback = [$this, $this->_map[$type]];
+                } else {
+                    $callback = $this->_map[$type];
+                }
 
                 // If specific condition type is array, then combine
                 // them with AND operation
                 if (isset($condition[0]) && is_array($condition[0])) {
                     foreach ($condition as $set) {
-                        $res = $res && call_user_func($callback, $set, $args);
+                        $res = $res && call_user_func($callback, $set, $context);
                     }
                 } else {
-                    $res = $res && call_user_func($callback, $condition, $args);
+                    $res = $res && call_user_func($callback, $condition, $context);
                 }
             } else {
                 $res = false;
@@ -78,18 +107,18 @@ class Condition
      * Evaluate group of BETWEEN conditions
      *
      * @param array $conditions
-     * @param array $args
+     * @param array $context
      *
      * @return boolean
      *
      * @access protected
      * @version 0.0.1
      */
-    protected static function evaluateBetweenConditions($conditions, $args)
+    protected function evaluateBetweenConditions($conditions, array $context)
     {
         $result = false;
 
-        foreach (self::prepareConditions($conditions, $args) as $cnd) {
+        foreach ($this->prepareConditions($conditions, $context) as $cnd) {
             // Convert the right condition into the array of array to cover more
             // complex between conditions like [[0,8],[13,15]]
             if (is_array($cnd['right'][0])) {
@@ -114,18 +143,18 @@ class Condition
      * The values have to be identical
      *
      * @param array $conditions
-     * @param array $args
+     * @param array $context
      *
      * @return boolean
      *
      * @access protected
      * @version 0.0.1
      */
-    protected static function evaluateEqualsConditions($conditions, $args)
+    protected function evaluateEqualsConditions($conditions, array $context)
     {
         $result = false;
 
-        foreach (self::prepareConditions($conditions, $args) as $condition) {
+        foreach ($this->prepareConditions($conditions, $context) as $condition) {
             $result = $result || ($condition['left'] === $condition['right']);
         }
 
@@ -136,34 +165,34 @@ class Condition
      * Evaluate group of NOT EQUALs conditions
      *
      * @param array $conditions
-     * @param array $args
+     * @param array $context
      *
      * @return boolean
      *
      * @access protected
      * @version 0.0.1
      */
-    protected static function evaluateNotEqualsConditions($conditions, $args)
+    protected function evaluateNotEqualsConditions($conditions, array $context)
     {
-        return !self::evaluateEqualsConditions($conditions, $args);
+        return !$this->evaluateEqualsConditions($conditions, $context);
     }
 
     /**
      * Evaluate group of GREATER THEN conditions
      *
      * @param array $conditions
-     * @param array $args
+     * @param array $context
      *
      * @return boolean
      *
      * @access protected
      * @version 0.0.1
      */
-    protected static function evaluateGreaterConditions($conditions, $args)
+    protected function evaluateGreaterConditions($conditions, array $context)
     {
         $result = false;
 
-        foreach (self::prepareConditions($conditions, $args) as $condition) {
+        foreach ($this->prepareConditions($conditions, $context) as $condition) {
             $result = $result || ($condition['left'] > $condition['right']);
         }
 
@@ -174,18 +203,18 @@ class Condition
      * Evaluate group of LESS THEN conditions
      *
      * @param array $conditions
-     * @param array $args
+     * @param array $context
      *
      * @return boolean
      *
      * @access protected
      * @version 0.0.1
      */
-    protected static function evaluateLessConditions($conditions, $args)
+    protected function evaluateLessConditions($conditions, array $context)
     {
         $result = false;
 
-        foreach (self::prepareConditions($conditions, $args) as $condition) {
+        foreach ($this->prepareConditions($conditions, $context) as $condition) {
             $result = $result || ($condition['left'] < $condition['right']);
         }
 
@@ -196,18 +225,18 @@ class Condition
      * Evaluate group of GREATER OR EQUALS THEN conditions
      *
      * @param array $conditions
-     * @param array $args
+     * @param array $context
      *
      * @return boolean
      *
      * @access protected
      * @version 0.0.1
      */
-    protected static function evaluateGreaterOrEqualsConditions($conditions, $args)
+    protected function evaluateGreaterOrEqualsConditions($conditions, array $context)
     {
         $result = false;
 
-        foreach (self::prepareConditions($conditions, $args) as $condition) {
+        foreach ($this->prepareConditions($conditions, $context) as $condition) {
             $result = $result || ($condition['left'] >= $condition['right']);
         }
 
@@ -218,18 +247,18 @@ class Condition
      * Evaluate group of LESS OR EQUALS THEN conditions
      *
      * @param array $conditions
-     * @param array $args
+     * @param array $context
      *
      * @return boolean
      *
      * @access protected
      * @version 0.0.1
      */
-    protected static function evaluateLessOrEqualsConditions($conditions, $args)
+    protected function evaluateLessOrEqualsConditions($conditions, array $context)
     {
         $result = false;
 
-        foreach (self::prepareConditions($conditions, $args) as $condition) {
+        foreach ($this->prepareConditions($conditions, $context) as $condition) {
             $result = $result || ($condition['left'] <= $condition['right']);
         }
 
@@ -240,18 +269,18 @@ class Condition
      * Evaluate group of IN conditions
      *
      * @param array $conditions
-     * @param array $args
+     * @param array $context
      *
      * @return boolean
      *
      * @access protected
      * @version 0.0.1
      */
-    protected static function evaluateInConditions($conditions, $args)
+    protected function evaluateInConditions($conditions, array $context)
     {
         $res = false;
 
-        foreach (self::prepareConditions($conditions, $args) as $cnd) {
+        foreach ($this->prepareConditions($conditions, $context) as $cnd) {
             if (is_array($cnd['left'])) {
                 $cl = count($cnd['left']);
                 $cr = count($cnd['right']);
@@ -270,34 +299,34 @@ class Condition
      * Evaluate group of NOT IN conditions
      *
      * @param array $conditions
-     * @param array $args
+     * @param array $context
      *
      * @return boolean
      *
      * @access protected
      * @version 0.0.1
      */
-    protected static function evaluateNotInConditions($conditions, $args)
+    protected function evaluateNotInConditions($conditions, array $context)
     {
-        return !self::evaluateInConditions($conditions, $args);
+        return !$this->evaluateInConditions($conditions, $context);
     }
 
     /**
      * Evaluate group of LIKE conditions
      *
      * @param array $conditions
-     * @param array $args
+     * @param array $context
      *
      * @return boolean
      *
      * @access protected
      * @version 0.0.1
      */
-    protected static function evaluateLikeConditions($conditions, $args)
+    protected function evaluateLikeConditions($conditions, array $context)
     {
         $result = false;
 
-        foreach (self::prepareConditions($conditions, $args) as $cnd) {
+        foreach ($this->prepareConditions($conditions, $context) as $cnd) {
             foreach ((array) $cnd['right'] as $el) {
                 $sub = str_replace(
                     array('\*', '@'), array('.*', '\\@'), preg_quote($el)
@@ -313,34 +342,34 @@ class Condition
      * Evaluate group of NOT LIKE conditions
      *
      * @param array $conditions
-     * @param array $args
+     * @param array $context
      *
      * @return boolean
      *
      * @access protected
      * @version 0.0.1
      */
-    protected static function evaluateNotLikeConditions($conditions, $args)
+    protected function evaluateNotLikeConditions($conditions, array $context)
     {
-        return !self::evaluateLikeConditions($conditions, $args);
+        return !$this->evaluateLikeConditions($conditions, $context);
     }
 
     /**
      * Evaluate group of REGEX conditions
      *
      * @param array $conditions
-     * @param array $args
+     * @param array $context
      *
      * @return boolean
      *
      * @access protected
      * @version 0.0.1
      */
-    protected static function evaluateRegexConditions($conditions, $args)
+    protected function evaluateRegexConditions($conditions, array $context)
     {
         $result = false;
 
-        foreach (self::prepareConditions($conditions, $args) as $condition) {
+        foreach ($this->prepareConditions($conditions, $context) as $condition) {
             $result = $result || preg_match($condition['right'], $condition['left']);
         }
 
@@ -351,22 +380,22 @@ class Condition
      * Prepare conditions by replacing all defined tokens
      *
      * @param array $conditions
-     * @param array $args
+     * @param array $context
      *
      * @return array
      *
      * @access protected
      * @version 0.0.1
      */
-    protected static function prepareConditions($conditions, $args)
+    protected function prepareConditions($conditions, array $context)
     {
         $result = array();
 
         if (is_array($conditions)) {
             foreach ($conditions as $left => $right) {
                 $result[] = array(
-                    'left'  => self::parseExpression($left, $args),
-                    'right' => self::parseExpression($right, $args)
+                    'left'  => $this->parseExpression($left, $context),
+                    'right' => $this->parseExpression($right, $context)
                 );
             }
         }
@@ -377,26 +406,28 @@ class Condition
     /**
      * Parse condition and try to replace all defined tokens
      *
-     * @param mixed $exp  Part of the condition (either left or right)
-     * @param array $args Inline arguments
+     * @param mixed $exp     Part of the condition (either left or right)
+     * @param array $context Context
      *
      * @return mixed Prepared part of the condition or false on failure
      *
      * @access protected
      * @version 0.0.1
      */
-    public static function parseExpression($exp, $args)
+    public function parseExpression($exp, array $context)
     {
         if (is_scalar($exp)) {
             if (preg_match_all('/(\$\{[^}]+\})/', $exp, $match)) {
-                $exp = Marker::evaluate($exp, $match[1], $args);
+                $exp = $this->_parser->getMarkerParser()->evaluate(
+                    $exp, $match[1], $context
+                );
             }
 
             // Perform type casting if necessary
-            $exp = Typecast::execute($exp);
+            $exp = $this->_parser->getTypecastParser()->cast($exp);
         } elseif (is_array($exp) || is_object($exp)) {
             foreach ($exp as &$value) {
-                $value = self::parseExpression($value, $args);
+                $value = $this->parseExpression($value, $context);
             }
         } elseif (is_null($exp) === false) {
             $exp = false;

@@ -8,10 +8,13 @@
         {
             "Effect": "allow",
             "Resource": "Car",
-            "Action": "purchase",
+            "Action": [
+                "purchase",
+                "view"
+            ],
             "Condition": {
                 "LessOrEquals": {
-                    "${RESOURCE.price}": 30000
+                    "${CONTEXT.Resource.price}": 30000
                 }
             }
         }

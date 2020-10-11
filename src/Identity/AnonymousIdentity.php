@@ -11,6 +11,11 @@ namespace JsonPolicy\Identity;
 
 use JsonPolicy\Contract\IIdentity;
 
+/**
+ * Anonymous identity class
+ *
+ * @version 0.0.1
+ */
 class AnonymousIdentity implements IIdentity
 {
 
