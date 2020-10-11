@@ -2,8 +2,7 @@
     "Statement": [
         {
             "Effect": "deny",
-            "Resource": "Car",
-            "Action": "*"
+            "Resource": "Car"
         },
         {
             "Effect": "allow",
@@ -14,12 +13,9 @@
             ],
             "Condition": {
                 "LessOrEquals": {
-                    "${CONTEXT.Resource.price}": 30000
+                    "${Car.price}": 30000
                 }
             }
         }
-    ],
-    "Assignee": [
-        "anonymous"
     ]
 }

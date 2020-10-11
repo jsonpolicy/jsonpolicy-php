@@ -1,0 +1,35 @@
+<?php
+
+require dirname(__DIR__) . '/../vendor/autoload.php';
+require __DIR__ . '/user.php';
+require __DIR__ . '/userentity.php';
+
+use JsonPolicy\Manager;
+
+$manager = Manager::bootstrap([
+    'identity'   => new User(1, 'me'),
+    'repository' => [
+        json_decode(file_get_contents(__DIR__  . '/policy.json'), true)
+    ]
+]);
+
+function CanEditUserEntity($entity)
+{
+    global $manager;
+
+    if ($manager->isAllowedTo($entity, 'edit')) {
+        echo "Yes. You can edit the user '{$entity->username}'\n";
+    } else {
+        echo "No. Currently you cannot edit the user '{$entity->username}'\n";
+    }
+}
+
+CanEditUserEntity(new UserEntity(array(
+    'id'       => 1,
+    'username' => 'me'
+)));
+
+CanEditUserEntity(new UserEntity(array(
+    'id'       => 2,
+    'username' => 'another-user'
+)));

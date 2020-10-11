@@ -1,0 +1,28 @@
+{
+    "Statement": [
+        {
+            "Effect": "deny",
+            "Resource": "UserEntity"
+        },
+        {
+            "Effect": "allow",
+            "Resource": "UserEntity",
+            "Action": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "Condition": {
+                "Equals": {
+                    "(*int)${IDENTITY.id}": "(*int)${UserEntity.id}"
+                },
+                "NotIn": {
+                    "${DATETIME.l}": [
+                        "Saturday",
+                        "Sunday"
+                    ]
+                }
+            }
+        }
+    ]
+}

@@ -75,7 +75,7 @@ class Marker
      * @access public
      * @version 0.0.1
      */
-    public function evaluate($part, array $tokens, array $context = [])
+    public function evaluate($part, array $tokens, array $context)
     {
         foreach ($tokens as $token) {
             $val  = $this->getTokenValue($token, $context);
@@ -100,11 +100,13 @@ class Marker
      * @access public
      * @version 0.0.1
      */
-    public function getTokenValue($token, array $context = [])
+    public function getTokenValue($token, array $context)
     {
         $parts = explode('.', preg_replace('/^\$\{([^}]+)\}$/', '${1}', $token), 2);
 
-        if (isset($this->_map[$parts[0]])) {
+        if ($parts[0] === $context['Alias']) {
+            $value = self::getContextValue('Resource.' . $parts[1], $context);
+        } elseif (isset($this->_map[$parts[0]])) {
             $value = call_user_func($this->_map[$parts[0]], $parts[1], $context);
         } else {
             $value = null;

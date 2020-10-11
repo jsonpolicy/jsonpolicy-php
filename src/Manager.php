@@ -168,6 +168,7 @@ class Manager
         $context = array(
             'Manager'  => $this,
             'Resource' => $resource,
+            'Alias'    => $alias,
             'Args'     => $args
         );
 
@@ -225,26 +226,7 @@ class Manager
      */
     protected function initialize()
     {
-        $attached_policies = [];
-
-        // Get current identity
-        $identity = $this->getIdentity();
-
-        // Iterate over each policy in the repository and if attached to current
-        // identity, then pass it to the Core\Parser object for further processing
-        foreach($this->_getSettingIterator('repository') as $id => $policy) {
-            if (in_array($id, $identity->getAttachedPolicyIds(), true)) {
-                $attached_policies[] = $policy;
-            }
-
-            if (array_key_exists('Assignee', $policy)) {
-                if (in_array($identity->getType(), $policy['Assignee'], true)) {
-                    $attached_policies[] = $policy;
-                }
-            }
-        }
-
-        $this->_parser = new Parser($attached_policies, $this);
+        $this->_parser = new Parser($this->_getSettingIterator('repository'), $this);
     }
 
     /**

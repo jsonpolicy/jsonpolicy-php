@@ -16,32 +16,4 @@ use JsonPolicy\Contract\IIdentity;
  *
  * @version 0.0.1
  */
-class AnonymousIdentity implements IIdentity
-{
-
-    /**
-     * Identity type
-     *
-     * This is just a basic anonymous identity
-     *
-     * @version 0.0.1
-     */
-    const TYPE = 'anonymous';
-
-    /**
-     * @inheritdoc
-     */
-    public function getAttachedPolicyIds(): array
-    {
-        return [];
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function getType(): string
-    {
-        return self::TYPE;
-    }
-
-}
+class AnonymousIdentity implements IIdentity {}
