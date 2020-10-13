@@ -1,8 +1,7 @@
 <?php
 
-use JsonPolicy\Contract\IIdentity;
 
-class User implements IIdentity
+class User
 {
     public $id;
     public $username;

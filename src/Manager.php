@@ -9,10 +9,13 @@
 
 namespace JsonPolicy;
 
-use JsonPolicy\Contract\IIdentity;
-use JsonPolicy\Core\Parser,
-    JsonPolicy\Identity\AnonymousIdentity;
+use JsonPolicy\Core\Parser;
 
+/**
+ * Main policy manager
+ *
+ * @version 0.0.1
+ */
 class Manager
 {
 
@@ -42,7 +45,7 @@ class Manager
     /**
      * Current identity
      *
-     * @var Contract\IIdentity
+     * @var object
      *
      * @access private
      * @version 0.0.1
@@ -84,7 +87,7 @@ class Manager
     protected function __construct(array $settings = [])
     {
         if (empty($settings['identity'])) {
-            $this->_identity = new AnonymousIdentity;
+            $this->_identity = (object) [];
         } elseif (is_a($settings['identity'], 'Closure')) {
             $this->_identity = call_user_func($settings['identity'], $settings);
         } else {
@@ -206,12 +209,12 @@ class Manager
     /**
      * Get current identity
      *
-     * @return IIdentity
+     * @return object
      *
      * @access public
      * @version 0.0.1
      */
-    public function getIdentity(): IIdentity
+    public function getIdentity()
     {
         return $this->_identity;
     }

@@ -9,6 +9,11 @@
 
 namespace JsonPolicy\Core;
 
+/**
+ * Conditions parser and evaluator
+ *
+ * @version 0.0.1
+ */
 class Condition
 {
 
@@ -76,7 +81,8 @@ class Condition
      */
     public function evaluate($conditions, array $context)
     {
-        $res = true;
+        $res      = true;
+        $operator = $this->_determineConditionOperator($conditions);
 
         foreach ($conditions as $type => $condition) {
             if (isset($this->_map[$type])) {
@@ -93,7 +99,13 @@ class Condition
                         $res = $res && call_user_func($callback, $set, $context);
                     }
                 } else {
-                    $res = $res && call_user_func($callback, $condition, $context);
+                    if ($operator === 'AND') {
+                        $res = $res && call_user_func($callback, $condition, $context);
+                    } elseif ($operator === 'OR') {
+                        $res = $res || call_user_func($callback, $condition, $context);
+                    } elseif ($operator === 'XOR') {
+                        $res = $res xor call_user_func($callback, $condition, $context);
+                    }
                 }
             } else {
                 $res = false;
@@ -394,8 +406,8 @@ class Condition
         if (is_array($conditions)) {
             foreach ($conditions as $left => $right) {
                 $result[] = array(
-                    'left'  => $this->parseExpression($left, $context),
-                    'right' => $this->parseExpression($right, $context)
+                    'left'  => $this->_parseExpression($left, $context),
+                    'right' => $this->_parseExpression($right, $context)
                 );
             }
         }
@@ -411,10 +423,10 @@ class Condition
      *
      * @return mixed Prepared part of the condition or false on failure
      *
-     * @access protected
+     * @access private
      * @version 0.0.1
      */
-    public function parseExpression($exp, array $context)
+    private function _parseExpression($exp, array $context)
     {
         if (is_scalar($exp)) {
             if (preg_match_all('/(\$\{[^}]+\})/', $exp, $match)) {
@@ -427,13 +439,41 @@ class Condition
             $exp = $this->_parser->getTypecastParser()->cast($exp);
         } elseif (is_array($exp) || is_object($exp)) {
             foreach ($exp as &$value) {
-                $value = $this->parseExpression($value, $context);
+                $value = $this->_parseExpression($value, $context);
             }
         } elseif (is_null($exp) === false) {
             $exp = false;
         }
 
         return $exp;
+    }
+
+    /**
+     * Determine primary logical operator
+     *
+     * Based on the reserved "Operator" attribute, determine the how the
+     * sub-conditions are going to be logically joined to determine boolean result
+     *
+     * @param array &$conditions
+     *
+     * @return string
+     *
+     * @access private
+     * @version 0.0.1
+     */
+    private function _determineConditionOperator(array &$conditions)
+    {
+        $op = 'AND';
+
+        if (isset($conditions['Operator'])) {
+            $op = $conditions['Operator'];
+
+            // Remove this reserved property to avoid it from being used as actual
+            // condition
+            unset($conditions['Operator']);
+        }
+
+        return (in_array($op, array('AND', 'OR', 'XOR'), true) ? $op : 'AND');
     }
 
 }

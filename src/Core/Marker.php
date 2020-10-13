@@ -34,16 +34,10 @@ class Marker
      * @version 0.0.1
      */
     private $_map = array(
-        'IDENTITY'    => __CLASS__ . '::getIdentityValue',
-        'DATETIME'    => __CLASS__ . '::getDatetime',
-        'HTTP_GET'    => __CLASS__ . '::getQueryParam',
-        'HTTP_POST'   => __CLASS__ . '::getPostParam',
-        'HTTP_COOKIE' => __CLASS__ . '::getCookieParam',
-        'PHP_SERVER'  => __CLASS__ . '::getServerParam',
-        'PHP_GLOBAL'  => __CLASS__ . '::getGlobalVariable',
-        'CONTEXT'     => __CLASS__ . '::getContextValue',
-        'PHP_ENV'     => 'getenv',
-        'PHP_CONST'   => __CLASS__ . '::getConstant'
+        'IDENTITY' => __CLASS__ . '::getIdentityValue',
+        'DATETIME' => __CLASS__ . '::getDatetime',
+        'CONTEXT'  => __CLASS__ . '::getContextValue',
+        'ENV'      => 'getenv',
     );
 
     /**
@@ -75,7 +69,7 @@ class Marker
      * @access public
      * @version 0.0.1
      */
-    public function evaluate($part, array $tokens, array $context)
+    public function evaluate($part, array $tokens, array $context = [])
     {
         foreach ($tokens as $token) {
             $val  = $this->getTokenValue($token, $context);
@@ -100,7 +94,7 @@ class Marker
      * @access public
      * @version 0.0.1
      */
-    public function getTokenValue($token, array $context)
+    public function getTokenValue($token, array $context = [])
     {
         $parts = explode('.', preg_replace('/^\$\{([^}]+)\}$/', '${1}', $token), 2);
 
@@ -148,21 +142,6 @@ class Marker
     }
 
     /**
-     * Get a value for the defined constant
-     *
-     * @param string $const
-     *
-     * @return mixed
-     *
-     * @access protected
-     * @version 0.0.1
-     */
-    protected static function getConstant($const)
-    {
-        return (defined($const) ? constant($const) : null);
-    }
-
-    /**
      * Get current datetime
      *
      * @param string $format
@@ -175,21 +154,6 @@ class Marker
     protected static function getDatetime($format)
     {
         return (new DateTime('now', new DateTimeZone('UTC')))->format($format);
-    }
-
-    /**
-     * Get global variable's value
-     *
-     * @param string $var
-     *
-     * @return mixed
-     *
-     * @access protected
-     * @version 0.0.1
-     */
-    protected static function getGlobalVariable($var)
-    {
-        return (isset($GLOBALS[$var]) ? $GLOBALS[$var] : null);
     }
 
     /**

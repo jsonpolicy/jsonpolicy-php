@@ -12,6 +12,11 @@ namespace JsonPolicy\Core;
 use DateTime,
     DateTimeZone;
 
+/**
+ * Typecast parser
+ *
+ * @version 0.0.1
+ */
 class Typecast
 {
 
