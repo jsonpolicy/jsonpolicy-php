@@ -220,6 +220,25 @@ class Manager
     }
 
     /**
+     * Get policy param
+     *
+     * @param mixed $key
+     * @param mixed $args
+     *
+     * @return mixed
+     *
+     * @access public
+     * @version 0.0.1
+     */
+    public function getParam($key, $args = [])
+    {
+        return $this->_parser->getParam($key, array(
+            'Manager'  => $this,
+            'Args'     => $args
+        ));
+    }
+
+    /**
      * Initialize the policy manager
      *
      * @return void

@@ -72,49 +72,52 @@ class Parser
         $this->_manager = $manager;
 
         foreach ($policies as $policy) {
-            $this->updatePolicyTree($this->parsePolicy($policy));
+            $this->indexPolicyTree($this->parsePolicy($policy));
         }
     }
 
     /**
      * Get policy parameter
      *
-     * @param string $name
-     * @param array  $args
+     * @param string $key
+     * @param array  $context
      *
      * @return mixed
      *
      * @access public
      * @version 0.0.1
      */
-    public function getParam($name, $args = array())
+    public function getParam($key, $context)
     {
-        $value = null;
+        $result = null;
 
-        if (isset($this->_tree['Param'][$name])) {
-            $param = $this->_tree['Param'][$name];
+        if ($this->isDefined($key, 'Param')) {
+            $param = $this->getBestCandidate(
+                $this->_tree['Param'][$key], $context
+            );
 
-            if ($this->_isApplicable($param, $args)) {
-                $value = $param['Value'];
+            if (!is_null($param)) {
+                $result = $param['Value'];
             }
         }
 
-        return $value;
+        return $result;
     }
 
     /**
      * Check if specific resource is defined in policy(s)
      *
-     * @param string $resource
+     * @param string $key
+     * @param string $type
      *
      * @return boolean
      *
      * @access public
      * @version 0.0.1
      */
-    public function isDefined($resource)
+    public function isDefined($key, $type = 'Statement')
     {
-        return isset($this->_tree['Statement'][$resource]);
+        return isset($this->_tree[$type][$key]);
     }
 
     /**
@@ -136,7 +139,7 @@ class Parser
         $result = null;
 
         if ($this->isDefined($resource)) {
-            $stm = $this->getCandidateStatement(
+            $stm = $this->getBestCandidate(
                 $this->_tree['Statement'][$resource], $context
             );
 
@@ -206,9 +209,9 @@ class Parser
     }
 
     /**
-     * Based on multiple competing statements, get the best candidate
+     * Based on multiple competing statements/params, get the best candidate
      *
-     * @param array $statements
+     * @param array $collection
      * @param array $context
      *
      * @return array|null
@@ -216,16 +219,16 @@ class Parser
      * @access protected
      * @version 0.0.1
      */
-    protected function getCandidateStatement($statements, array $context)
+    protected function getBestCandidate($collection, array $context)
     {
         $candidate = null;
 
-        if (is_array($statements) && isset($statements[0])) {
-            // Take in consideration ONLY currently applicable statements and select
-            // either the last statement or the one that is enforced
+        if (is_array($collection) && isset($collection[0])) {
+            // Take in consideration ONLY currently applicable statements or param
+            // and select either the last one or the one that is enforced
             $enforced = false;
 
-            foreach($statements as $stm) {
+            foreach($collection as $stm) {
                 if ($this->_isApplicable($stm, $context)) {
                     if (!empty($stm['Enforce'])) {
                         $candidate = $stm;
@@ -235,8 +238,8 @@ class Parser
                     }
                 }
             }
-        } else if ($this->_isApplicable($statements, $context)) {
-            $candidate = $statements;
+        } else if ($this->_isApplicable($collection, $context)) {
+            $candidate = $collection;
         }
 
         return $candidate;
@@ -297,20 +300,15 @@ class Parser
      * @access protected
      * @version 0.0.1
      */
-    protected function updatePolicyTree($addition)
+    protected function indexPolicyTree($addition)
     {
-        $stmts  = &$this->_tree['Statement'];
-        $params = &$this->_tree['Param'];
-
         // Step #1. If there are any params, let's index them and insert into the list
         foreach ($addition['Param'] as $param) {
             if (!empty($param['Key'])) {
                 $param['Value'] = $this->replaceTokens($param['Value'], true);
 
                 foreach($this->evaluatePolicyKey($param['Key']) as $key) {
-                    if (!isset($params[$key]) || empty($params[$key]['Enforce'])) {
-                        $params[$key] = $param;
-                    }
+                    $this->_insertIntoPolicyTree('Param', $key, $param);
                 }
             }
         }
@@ -324,17 +322,11 @@ class Parser
             foreach ($resources as $res) {
                 foreach($this->evaluatePolicyKey($res) as $resource) {
                     foreach ($actions as $act) {
-                        $id = $resource . (!empty($act) ? "::{$act}" : '::*');
-
-                        if (isset($stmts[$id])) {
-                            if (isset($stmts[$id][0])) {
-                                $stmts[$id][] = $stm;
-                            } else {
-                                $stmts[$id] = array($stmts[$id], $stm);
-                            }
-                        } else {
-                            $stmts[$id] = $stm;
-                        }
+                        $this->_insertIntoPolicyTree(
+                            'Statement',
+                            $resource . (!empty($act) ? "::{$act}" : '::*'),
+                            $stm
+                        );
                     }
                 }
             }
@@ -445,9 +437,9 @@ class Parser
     }
 
     /**
-     * Check if policy statement is applicable
+     * Check if policy statement or param is applicable
      *
-     * @param array $stmt
+     * @param array $obj
      * @param array $args
      *
      * @return boolean
@@ -455,17 +447,44 @@ class Parser
      * @access private
      * @version 0.0.1
      */
-    private function _isApplicable($stmt, array $context)
+    private function _isApplicable($obj, array $context)
     {
         $result = true;
 
-        if (!empty($stmt['Condition']) && is_array($stmt['Condition'])) {
+        if (!empty($obj['Condition']) && is_array($obj['Condition'])) {
             $result = $this->getConditionParser()->evaluate(
-                $stmt['Condition'], $context
+                $obj['Condition'], $context
             );
         }
 
         return $result;
+    }
+
+    /**
+     * Insert either statement or param into the policy tree
+     *
+     * @param string $type
+     * @param string $key
+     * @param array  $data
+     *
+     * @return void
+     *
+     * @access private
+     * @version 0.0.1
+     */
+    private function _insertIntoPolicyTree($type, $key, $data)
+    {
+        $branch = &$this->_tree[$type];
+
+        if (isset($branch[$key])) {
+            if (isset($branch[$key][0])) {
+                $branch[$key][] = $data;
+            } else {
+                $branch[$key] = array($branch[$key], $data);
+            }
+        } else {
+            $branch[$key] = $data;
+        }
     }
 
 }

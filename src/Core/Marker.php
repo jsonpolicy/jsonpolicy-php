@@ -37,7 +37,7 @@ class Marker
         'IDENTITY' => __CLASS__ . '::getIdentityValue',
         'DATETIME' => __CLASS__ . '::getDatetime',
         'CONTEXT'  => __CLASS__ . '::getContextValue',
-        'ENV'      => 'getenv',
+        'ENV'      => __CLASS__ . '::getEnvVar',
     );
 
     /**
@@ -154,6 +154,21 @@ class Marker
     protected static function getDatetime($format)
     {
         return (new DateTime('now', new DateTimeZone('UTC')))->format($format);
+    }
+
+    /**
+     * Get environment value
+     *
+     * @param string $prop
+     *
+     * @return mixed
+     *
+     * @access protected
+     * @version 0.0.1
+     */
+    protected static function getEnvVar($prop)
+    {
+        return getenv($prop);
     }
 
     /**

@@ -1,0 +1,22 @@
+{
+    "Param": [
+        {
+            "Key": "API:endpoint",
+            "Value": "https://staging-myapi.mydomain.io",
+            "Condition": {
+                "Equals": {
+                    "(*int)${ENV.SHLVL}": 0
+                }
+            }
+        },
+        {
+            "Key": "API:endpoint",
+            "Value": "https://myapi.mydomain.io",
+            "Condition": {
+                "Equals": {
+                    "(*int)${ENV.SHLVL}": 2
+                }
+            }
+        }
+    ]
+}
