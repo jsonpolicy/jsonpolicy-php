@@ -139,6 +139,12 @@ class Parser
         $result = null;
 
         if ($this->isDefined($resource)) {
+            // Log
+            $this->log(
+                'Checking for the applicable statement',
+                $this->_tree['Statement'][$resource]
+            );
+
             $stm = $this->getBestCandidate(
                 $this->_tree['Statement'][$resource], $context
             );
@@ -149,6 +155,22 @@ class Parser
         }
 
         return $result;
+    }
+
+    /**
+     * Logger
+     *
+     * @param string $msg
+     * @param mixed  $args
+     *
+     * @return void
+     *
+     * @access public
+     * @version 0.0.1
+     */
+    public function log($msg, $args = null)
+    {
+        $this->_manager->log($msg, $args);
     }
 
     /**
@@ -211,7 +233,7 @@ class Parser
     /**
      * Based on multiple competing statements/params, get the best candidate
      *
-     * @param array $collection
+     * @param array $match
      * @param array $context
      *
      * @return array|null
@@ -219,16 +241,18 @@ class Parser
      * @access protected
      * @version 0.0.1
      */
-    protected function getBestCandidate($collection, array $context)
+    protected function getBestCandidate($match, array $context)
     {
         $candidate = null;
 
-        if (is_array($collection) && isset($collection[0])) {
+        if (is_array($match) && isset($match[0])) {
             // Take in consideration ONLY currently applicable statements or param
             // and select either the last one or the one that is enforced
             $enforced = false;
 
-            foreach($collection as $stm) {
+            $this->log('Found ' . count($match) . ' matching statements');
+
+            foreach($match as $stm) {
                 if ($this->_isApplicable($stm, $context)) {
                     if (!empty($stm['Enforce'])) {
                         $candidate = $stm;
@@ -238,8 +262,14 @@ class Parser
                     }
                 }
             }
-        } else if ($this->_isApplicable($collection, $context)) {
-            $candidate = $collection;
+        } else if ($this->_isApplicable($match, $context)) {
+            $candidate = $match;
+        }
+
+        if ($candidate) {
+            $this->log('Chosen applicable candidate', $candidate);
+        } else {
+            $this->log('Note: No applicable candidates identified');
         }
 
         return $candidate;
@@ -355,7 +385,7 @@ class Parser
         $response = array();
 
         // Allow to build resource name or param key dynamically.
-        if (preg_match('/^(.*)[\s]+(map to|=>)[\s]+(.*)$/i', $key, $match)) {
+        if (preg_match('/^(.*)[\s]+(=>)[\s]+(.*)$/i', $key, $match)) {
             $values = (array) $this->getMarkerParser()->getTokenValue($match[3]);
 
             // Create the map of resources/params and replace

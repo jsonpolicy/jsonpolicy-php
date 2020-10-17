@@ -36,7 +36,7 @@ class Marker
     private $_map = array(
         'IDENTITY' => __CLASS__ . '::getIdentityValue',
         'DATETIME' => __CLASS__ . '::getDatetime',
-        'CONTEXT'  => __CLASS__ . '::getContextValue',
+        'ARGS'     => __CLASS__ . '::getContextArgValue',
         'ENV'      => __CLASS__ . '::getEnvVar',
     );
 
@@ -99,7 +99,7 @@ class Marker
         $parts = explode('.', preg_replace('/^\$\{([^}]+)\}$/', '${1}', $token), 2);
 
         if ($parts[0] === $context['Alias']) {
-            $value = self::getContextValue('Resource.' . $parts[1], $context);
+            $value = self::_getValueByXPath($context, 'Resource.' . $parts[1]);
         } elseif (isset($this->_map[$parts[0]])) {
             $value = call_user_func($this->_map[$parts[0]], $parts[1], $context);
         } else {
@@ -136,9 +136,9 @@ class Marker
      * @access protected
      * @version 0.0.1
      */
-    protected static function getContextValue($prop, array $context)
+    protected static function getContextArgValue($prop, array $context)
     {
-        return self::_getValueByXPath($context, $prop);
+        return self::_getValueByXPath($context, 'Args.' . $prop);
     }
 
     /**

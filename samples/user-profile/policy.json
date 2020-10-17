@@ -13,6 +13,7 @@
                 "delete"
             ],
             "Condition": {
+                "Operator": "OR",
                 "Equals": {
                     "(*int)${IDENTITY.id}": "(*int)${UserEntity.id}"
                 },

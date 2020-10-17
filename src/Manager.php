@@ -20,6 +20,20 @@ class Manager
 {
 
     /**
+     * Debug mode
+     *
+     * @version 0.0.1
+     */
+    const DEBUG_MODE = 'debug';
+
+    /**
+     * Production mode (default)
+     *
+     * @version 0.0.1
+     */
+    const PROD_MODE = 'prod';
+
+    /**
      * Single instance of itself
      *
      * @var JsonPolicy\Manager
@@ -73,6 +87,16 @@ class Manager
     private $_parser;
 
     /**
+     * Debug logs
+     *
+     * @var array
+     *
+     * @access private
+     * @version 0.0.1
+     */
+    private $_logs = [];
+
+    /**
      * Bootstrap constructor
      *
      * Initialize the JSON policy framework.
@@ -117,12 +141,13 @@ class Manager
      * @return boolean|null
      *
      * @access public
-     * @throws Error
      * @version 0.0.1
      */
     public function __call($name, $args)
     {
         $result = null;
+
+        $this->startLog("Invoked \"{$name}\" method");
 
         // We are calling method like isAllowed, isAttached or isDeniedTo
         if (strpos($name, 'is') === 0) {
@@ -140,48 +165,7 @@ class Manager
                 $resource, $this->_stemEffect($effect), $action, $params
             );
         } else {
-            throw new \Error("Unsupported method {$name}");
-        }
-
-        return $result;
-    }
-
-    /**
-     * Check if resource and/or action is allowed
-     *
-     * @param mixed  $resource Resource name or resource object
-     * @param string $effect   Constraint effect (e.g. allow, deny)
-     * @param string $action   Any specific action upon provided resource
-     * @param mixed  $args     Inline arguments that are added to the context
-     *
-     * @return boolean|null The `null` is returned if there is no applicable statements
-     *                      that explicitly define effect
-     *
-     * @access public
-     * @version 0.0.1
-     */
-    public function is($resource, $effect, $action, $args)
-    {
-        $result = null;
-
-        // Get resource alias
-        $alias = $this->getResourceName($resource);
-
-        // Prepare the context
-        $context = array(
-            'Manager'  => $this,
-            'Resource' => $resource,
-            'Alias'    => $alias,
-            'Args'     => $args
-        );
-
-        $xpath    = $alias . (is_null($action) ? '' : "::{$action}");
-        $wildcard = "{$alias}::*";
-
-        if ($this->_parser->isDefined($xpath)) {
-            $result = $this->_parser->is($xpath, $effect, $context);
-        } elseif ($this->_parser->isDefined($wildcard)) {
-            $result = $this->_parser->is($wildcard, $effect, $context);
+            $this->log('Error: Unsupported method. It should start with "is".');
         }
 
         return $result;
@@ -201,6 +185,8 @@ class Manager
 
         if ($as_iterable) {
             $setting = $this->_getSettingIterator($name);
+        } else if (isset($this->_settings[$name])) {
+            $setting = $this->_settings[$name];
         }
 
         return $setting;
@@ -232,10 +218,121 @@ class Manager
      */
     public function getParam($key, $args = [])
     {
+        $this->startLog("Fetching \"{$key}\" param");
+
         return $this->_parser->getParam($key, array(
             'Manager'  => $this,
             'Args'     => $args
         ));
+    }
+
+    /**
+     * Wiping previous logs and insert the first log
+     *
+     * @param string $msg
+     * @param mixed  $args
+     *
+     * @return void
+     *
+     * @access public
+     * @version 0.0.1
+     */
+    public function startLog($msg, $args = null)
+    {
+        $this->_logs = [];
+        $this->log($msg, $args);
+    }
+
+    /**
+     * Store log to the debugging log
+     *
+     * If manage runs in the "debug" mode, persist that log
+     *
+     * @param string $msg
+     * @param mixed  $args
+     *
+     * @return void
+     *
+     * @access public
+     * @version 0.0.1
+     */
+    public function log($msg, $args = null)
+    {
+        $mode = $this->getSetting('mode', false);
+
+        if ($mode === self::DEBUG_MODE) {
+            if (is_null($args)) {
+                $this->_logs[] = $msg;
+            } else {
+                $this->_logs[] = array(
+                    'msg'  => $msg,
+                    'args' => $args
+                );
+            }
+        }
+    }
+
+    /**
+     * Get all logs
+     *
+     * @return array
+     *
+     * @access public
+     * @version 0.0.1
+     */
+    public function getLogs()
+    {
+        return $this->_logs;
+    }
+
+    /**
+     * Check if resource and/or action is allowed
+     *
+     * @param mixed  $resource Resource name or resource object
+     * @param string $effect   Constraint effect (e.g. allow, deny)
+     * @param string $action   Any specific action upon provided resource
+     * @param mixed  $args     Inline arguments that are added to the context
+     *
+     * @return boolean|null The `null` is returned if there is no applicable statements
+     *                      that explicitly define effect
+     *
+     * @access protected
+     * @version 0.0.1
+     */
+    protected function is($resource, $effect, $action, $args)
+    {
+        $result = null;
+
+        // Get resource alias
+        $alias = $this->getResourceName($resource);
+
+        // Prepare the context
+        $context = array(
+            'Manager'  => $this,
+            'Resource' => $resource,
+            'Alias'    => $alias,
+            'Args'     => $args
+        );
+
+        // Log the context
+        $this->log('Evaluating policies in the context', array(
+            'Resource'      => $resource,
+            'ResourceAlias' => $alias,
+            'Action'        => $action,
+            'Effect'        => $effect,
+            'Args'          => $args
+        ));
+
+        $xpath    = $alias . (is_null($action) ? '' : "::{$action}");
+        $wildcard = "{$alias}::*";
+
+        if ($this->_parser->isDefined($xpath)) {
+            $result = $this->_parser->is($xpath, $effect, $context);
+        } elseif ($this->_parser->isDefined($wildcard)) {
+            $result = $this->_parser->is($wildcard, $effect, $context);
+        }
+
+        return $result;
     }
 
     /**
