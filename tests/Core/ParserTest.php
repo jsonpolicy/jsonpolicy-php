@@ -1,8 +1,10 @@
 <?php
 
+namespace JSONPolicy\UnitTest\Core;
+
 use PHPUnit\Framework\TestCase;
 
-class FacadeTest extends TestCase
+class ParserTest extends TestCase
 {
 
     public function testPushAndPop()

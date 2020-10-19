@@ -147,7 +147,7 @@ class Manager
     {
         $result = null;
 
-        $this->startLog("Invoked \"{$name}\" method");
+        $this->startLog("Invoked \"{$name}\" method with params", $args);
 
         // We are calling method like isAllowed, isAttached or isDeniedTo
         if (strpos($name, 'is') === 0) {
@@ -315,13 +315,8 @@ class Manager
         );
 
         // Log the context
-        $this->log('Evaluating policies in the context', array(
-            'Resource'      => $resource,
-            'ResourceAlias' => $alias,
-            'Action'        => $action,
-            'Effect'        => $effect,
-            'Args'          => $args
-        ));
+        $this->log('Resource alias', $alias);
+        $this->log('Effect', $effect);
 
         $xpath    = $alias . (is_null($action) ? '' : "::{$action}");
         $wildcard = "{$alias}::*";

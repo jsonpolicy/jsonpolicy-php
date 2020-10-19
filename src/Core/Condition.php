@@ -84,11 +84,6 @@ class Condition
         $result   = null;
         $operator = $this->_determineConditionOperator($conditions);
 
-        // Log
-        $this->_parser->log(
-            "Evaluating condition groups with {$operator} operator", $conditions
-        );
-
         foreach ($conditions as $type => $group) {
             if (isset($this->_map[$type])) {
                 if (method_exists($this, $this->_map[$type])) {
@@ -100,19 +95,9 @@ class Condition
                 // Determining logical operator within group
                 $group_operator = $this->_determineConditionOperator($group);
 
-                $this->_parser->log(
-                    "Evaluating {$type} group with {$group_operator} operator",
-                    $group
-                );
-
                 // Evaluating group
                 $group_res = call_user_func(
                     $callback, $group, $context, $group_operator
-                );
-
-                // Log result
-                $this->_parser->log(
-                    "Group {$type} evaluated as " . ($group_res ? 'TRUE' : 'FALSE')
                 );
 
                 $result = $this->_compute($result, $group_res, $operator);
@@ -122,10 +107,6 @@ class Condition
                 $result = false;
             }
         }
-
-        $this->_parser->log(
-            'Conditions evaluated as ' . ($result ? 'TRUE' : 'FALSE')
-        );
 
         return $result;
     }
@@ -150,7 +131,15 @@ class Condition
         foreach ($this->prepareConditions($conditions, $context) as $cnd) {
             $sub_result = null;
 
-            foreach ($cnd['right'] as $subset) {
+            // Convert the right operand into the array of array to cover
+            // more complex conditions like [[0,8],[13,15]]
+            if (!is_array($cnd['right'][0])) {
+                $right_operand = array($cnd['right']);
+            } else {
+                $right_operand = $cnd['right'];
+            }
+
+            foreach ($right_operand as $subset) {
                 $min = (is_array($subset) ? array_shift($subset) : $subset);
                 $max = (is_array($subset) ? end($subset) : $subset);
 
@@ -363,15 +352,9 @@ class Condition
         $result = null;
 
         foreach ($this->prepareConditions($conditions, $context) as $cnd) {
-            $sub_result = null;
-
-            foreach ($cnd['right'] as $subset) {
-                $sub_result = $this->_compute(
-                    $sub_result, in_array($cnd['left'], $subset, true), 'OR'
-                );
-            }
-
-            $result = $this->_compute($result, $sub_result, $operator);
+            $result = $this->_compute(
+                $result, in_array($cnd['left'], $cnd['right'], true), $operator
+            );
         }
 
         return $result;
@@ -392,7 +375,15 @@ class Condition
     protected function evaluateNotInConditions(
         $conditions, array $context, $operator = 'AND'
     ) {
-        return !$this->evaluateInConditions($conditions, $context, $operator);
+        $result = null;
+
+        foreach ($this->prepareConditions($conditions, $context) as $cnd) {
+            $result = $this->_compute(
+                $result, !in_array($cnd['left'], $cnd['right'], true), $operator
+            );
+        }
+
+        return $result;
     }
 
     /**
@@ -417,10 +408,13 @@ class Condition
 
             foreach($cnd['right'] as $value) {
                 $sub = str_replace(
-                    array('\*', '#'), array('.*', '\\#'), preg_quote($value)
+                    array('\*', '\#'), array('.*', '\\#'), preg_quote($value)
                 );
+
                 $sub_result = $this->_compute(
-                    $sub_result, preg_match('#^' . $sub . '$#', $cnd['left']), 'OR'
+                    $sub_result,
+                    preg_match('#^' . $sub . '$#ms', $cnd['left']) === 1,
+                    'OR'
                 );
             }
 
@@ -445,7 +439,27 @@ class Condition
     protected function evaluateNotLikeConditions(
         $conditions, array $context, $operator = 'AND'
     ) {
-        return !$this->evaluateLikeConditions($conditions, $context, $operator);
+        $result = null;
+
+        foreach ($this->prepareConditions($conditions, $context) as $cnd) {
+            $sub_result = null;
+
+            foreach($cnd['right'] as $value) {
+                $sub = str_replace(
+                    array('\*', '\#'), array('.*', '\\#'), preg_quote($value)
+                );
+
+                $sub_result = $this->_compute(
+                    $sub_result,
+                    preg_match('#^' . $sub . '$#ms', $cnd['left']) !== 1,
+                    'OR'
+                );
+            }
+
+            $result = $this->_compute($result, $sub_result, $operator);
+        }
+
+        return $result;
     }
 
     /**
@@ -476,7 +490,7 @@ class Condition
                 }
 
                 $sub_result = $this->_compute(
-                    $sub_result, preg_match($regex, $cnd['left']), 'OR'
+                    $sub_result, preg_match($regex, $cnd['left']) === 1, 'OR'
                 );
             }
 
@@ -505,13 +519,7 @@ class Condition
             foreach ($conditions as $l => $r) {
                 $right_operand = $this->_parseExpression($r, $context);
 
-                if (is_array($right_operand)) {
-                    // Convert the right operand into the array of array to cover
-                    // more complex conditions like [[0,8],[13,15]]
-                    if (!is_array($right_operand[0])) {
-                        $right_operand = array($right_operand);
-                    }
-                } else {
+                if (!is_iterable($right_operand)) {
                     $right_operand = array($right_operand);
                 }
 
@@ -521,8 +529,6 @@ class Condition
                 );
             }
         }
-
-        $this->_parser->log('Prepared condition group', $result);
 
         return $result;
     }
@@ -585,7 +591,7 @@ class Condition
             unset($conditions['Operator']);
         }
 
-        return (in_array($op, array('AND', 'OR', 'XOR'), true) ? $op : 'AND');
+        return (in_array($op, array('AND', 'OR'), true) ? $op : 'AND');
     }
 
     /**
@@ -610,8 +616,6 @@ class Condition
             $result = $left && $right;
         } elseif ($operator === 'OR') {
             $result = $left || $right;
-        } elseif ($operator === 'XOR') {
-            $result = $left xor $right;
         }
 
         return $result;

@@ -139,12 +139,6 @@ class Parser
         $result = null;
 
         if ($this->isDefined($resource)) {
-            // Log
-            $this->log(
-                'Checking for the applicable statement',
-                $this->_tree['Statement'][$resource]
-            );
-
             $stm = $this->getBestCandidate(
                 $this->_tree['Statement'][$resource], $context
             );
@@ -249,8 +243,6 @@ class Parser
             // Take in consideration ONLY currently applicable statements or param
             // and select either the last one or the one that is enforced
             $enforced = false;
-
-            $this->log('Found ' . count($match) . ' matching statements');
 
             foreach($match as $stm) {
                 if ($this->_isApplicable($stm, $context)) {

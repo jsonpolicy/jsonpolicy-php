@@ -2,6 +2,7 @@
 <phpunit
     backupGlobals="false"
     colors="true"
+    bootstrap="tests/bootstrap.php"
     convertErrorsToExceptions="true"
     convertNoticesToExceptions="true"
     convertWarningsToExceptions="true"
@@ -10,8 +11,8 @@
         <testsuite name="Core">
             <directory suffix="Test.php">./tests/Core</directory>
         </testsuite>
-        <testsuite name="Facade">
-            <file>./tests/FacadeTest.php</file>
+        <testsuite name="Manager">
+            <file>./tests/ManagerTest.php</file>
         </testsuite>
     </testsuites>
 </phpunit>
