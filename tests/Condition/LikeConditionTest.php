@@ -1,6 +1,6 @@
 <?php
 
-namespace JSONPolicy\UnitTest\Core\Condition;
+namespace JSONPolicy\UnitTest\Condition;
 
 use PHPUnit\Framework\TestCase;
 
@@ -25,53 +25,53 @@ class LikeConditionTest extends TestCase
     public function testSingleConditionOneValue()
     {
         // Assert that values are similar
-        $this->assertTrue(self::$condition->evaluate([
+        $this->assertTrue($this->evaluate([
             "Like" => [
                 "hello" => "hel*"
             ]
-        ], []));
+        ]));
 
         // Assert that values are similar with asterisk in the middle
-        $this->assertTrue(self::$condition->evaluate([
+        $this->assertTrue($this->evaluate([
             "Like" => [
                 "hello" => "he*o"
             ]
-        ], []));
+        ]));
 
         // Assert that values are similar with asterisk at the beginning
-        $this->assertTrue(self::$condition->evaluate([
+        $this->assertTrue($this->evaluate([
             "Like" => [
                 "hello" => "*o"
             ]
-        ], []));
+        ]));
 
         // Assert that values are similar with newline
-        $this->assertTrue(self::$condition->evaluate([
+        $this->assertTrue($this->evaluate([
             "Like" => [
                 "he\nllo" => "*o"
             ]
-        ], []));
+        ]));
 
         // Assert that values are exact
-        $this->assertTrue(self::$condition->evaluate([
+        $this->assertTrue($this->evaluate([
             "Like" => [
                 "hello" => "hello"
             ]
-        ], []));
+        ]));
 
         // Assert that values are similar with some special RegExp symbols
-        $this->assertTrue(self::$condition->evaluate([
+        $this->assertTrue($this->evaluate([
             "Like" => [
                 "test#\\*(0.)" => "test#*"
             ]
-        ], []));
+        ]));
 
         // Assert that values are not similar
-        $this->assertFalse(self::$condition->evaluate([
+        $this->assertFalse($this->evaluate([
             "Like" => [
                 "nope" => "cal*"
             ]
-        ], []));
+        ]));
     }
 
     /**
@@ -85,18 +85,18 @@ class LikeConditionTest extends TestCase
     public function testSingleConditionMultipleValues()
     {
         // Assert that left operand is similar to at least one value
-        $this->assertTrue(self::$condition->evaluate([
+        $this->assertTrue($this->evaluate([
             "Like" => [
                 "role" => ["te*", "r*"]
             ]
-        ], []));
+        ]));
 
         // Assert that left operand is not similar to any values
-        $this->assertFalse(self::$condition->evaluate([
+        $this->assertFalse($this->evaluate([
             "Like" => [
                 "blah" => ["a*", "r*lo"]
             ]
-        ], []));
+        ]));
     }
 
     /**
@@ -110,23 +110,23 @@ class LikeConditionTest extends TestCase
     public function testMultipleConditionsMixedRightOperandWithOrOperator()
     {
         // Assert that at least one condition detects similarity
-        $this->assertTrue(self::$condition->evaluate([
+        $this->assertTrue($this->evaluate([
             "Like" => [
                 "Operator" => "OR",
                 "hello"    => ["nope", "world"],
                 "world"    => "*rld"
             ]
-        ], []));
+        ]));
 
         // Assert that there are no similarities in all conditions
-        $this->assertFalse(self::$condition->evaluate([
+        $this->assertFalse($this->evaluate([
             "Like" => [
                 "Operator" => "OR",
                 "hello"    => ["nope", "worl*"],
                 "world"    => "this",
                 "testing"  => [1, 2]
             ]
-        ], []));
+        ]));
     }
 
     /**
@@ -140,21 +140,21 @@ class LikeConditionTest extends TestCase
     public function testMultipleConditionsMixedRightOperandWithAndOperator()
     {
         // Assert that at all conditions have similarities
-        $this->assertTrue(self::$condition->evaluate([
+        $this->assertTrue($this->evaluate([
             "Like" => [
                 "nope"    => ["nope", "world"],
                 "world"   => "w*ld",
                 "testing" => ["t*"]
             ]
-        ], []));
+        ]));
 
         // Assert that at at least one condition has no similarity
-        $this->assertFalse(self::$condition->evaluate([
+        $this->assertFalse($this->evaluate([
             "Like" => [
                 "nope"  => ["*ope", "world"],
                 "hello" => "worl*"
             ]
-        ], []));
+        ]));
     }
 
 }

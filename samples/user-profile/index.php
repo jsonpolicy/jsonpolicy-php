@@ -6,10 +6,18 @@ require __DIR__ . '/userentity.php';
 
 use JsonPolicy\Manager;
 
+$me = new User(1, 'me');
+
 $manager = Manager::bootstrap([
-    'identity'   => new User(1, 'me'),
     'repository' => [
         json_decode(file_get_contents(__DIR__  . '/policy.json'), true)
+    ],
+    'markers' => [
+        'IDENTITY' => function($prop) {
+            global $me;
+
+            return $me->{$prop};
+        }
     ]
 ]);
 

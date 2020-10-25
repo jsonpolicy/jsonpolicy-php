@@ -1,6 +1,6 @@
 <?php
 
-namespace JSONPolicy\UnitTest\Core\Condition;
+namespace JSONPolicy\UnitTest\Condition;
 
 use PHPUnit\Framework\TestCase;
 
@@ -25,32 +25,32 @@ class NotEqualsConditionTest extends TestCase
     public function testSingleConditionOneValue()
     {
         // Assert that values are not identical
-        $this->assertTrue(self::$condition->evaluate([
+        $this->assertTrue($this->evaluate([
             "NotEquals" => [
                 "hello" => "hello world"
             ]
-        ], []));
+        ]));
 
         // Assert that values are the same
-        $this->assertFalse(self::$condition->evaluate([
+        $this->assertFalse($this->evaluate([
             "NotEquals" => [
                 "hello" => "hello"
             ]
-        ], []));
+        ]));
 
         // Assert that values are equal if integers
-        $this->assertFalse(self::$condition->evaluate([
+        $this->assertFalse($this->evaluate([
             "NotEquals" => [
                 "5" => 5
             ]
-        ], []));
+        ]));
 
         // Assert that numeric values are not equal if right value is string
-        $this->assertTrue(self::$condition->evaluate([
+        $this->assertTrue($this->evaluate([
             "NotEquals" => [
                 "5" => "5"
             ]
-        ], []));
+        ]));
     }
 
     /**
@@ -64,18 +64,18 @@ class NotEqualsConditionTest extends TestCase
     public function testSingleConditionMultipleValues()
     {
         // Assert that left operand is identical to at least one value
-        $this->assertFalse(self::$condition->evaluate([
+        $this->assertFalse($this->evaluate([
             "NotEquals" => [
                 "hello" => ["hello", "world"]
             ]
-        ], []));
+        ]));
 
         // Assert that left operand is not identical to any values
-        $this->assertTrue(self::$condition->evaluate([
+        $this->assertTrue($this->evaluate([
             "NotEquals" => [
                 "hello" => ["this", "world"]
             ]
-        ], []));
+        ]));
     }
 
     /**
@@ -89,23 +89,23 @@ class NotEqualsConditionTest extends TestCase
     public function testMultipleConditionsMixedRightOperandWithOrOperator()
     {
         // Assert that at least one condition has identical pair
-        $this->assertFalse(self::$condition->evaluate([
+        $this->assertFalse($this->evaluate([
             "NotEquals" => [
                 "Operator" => "OR",
                 "hello"    => ["nope", "world"],
                 "world"    => "world"
             ]
-        ], []));
+        ]));
 
         // Assert that there are no identical pairs in all conditions
-        $this->assertTrue(self::$condition->evaluate([
+        $this->assertTrue($this->evaluate([
             "NotEquals" => [
                 "Operator" => "OR",
                 "hello"    => ["nope", "world"],
                 "world"    => "this",
                 "testing"  => [1, 2]
             ]
-        ], []));
+        ]));
     }
 
     /**
@@ -119,20 +119,20 @@ class NotEqualsConditionTest extends TestCase
     public function testMultipleConditionsMixedRightOperandWithAndOperator()
     {
         // Assert that at all conditions have identical pairs
-        $this->assertFalse(self::$condition->evaluate([
+        $this->assertFalse($this->evaluate([
             "NotEquals" => [
                 "nope" => ["nope", "world"],
                 "world" => "world"
             ]
-        ], []));
+        ]));
 
         // Assert that at at least one condition has no identical pair
-        $this->assertTrue(self::$condition->evaluate([
+        $this->assertTrue($this->evaluate([
             "NotEquals" => [
                 "nope"  => ["nope", "world"],
                 "hello" => "world"
             ]
-        ], []));
+        ]));
     }
 
 }

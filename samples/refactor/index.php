@@ -9,5 +9,3 @@ $manager = Manager::bootstrap([
         json_decode(file_get_contents(__DIR__  . '/policy.json'), true)
     ]
 ]);
-
-print_r($manager->getParam('API:endpoint'));

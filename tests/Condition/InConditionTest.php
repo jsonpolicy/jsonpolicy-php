@@ -1,6 +1,6 @@
 <?php
 
-namespace JSONPolicy\UnitTest\Core\Condition;
+namespace JSONPolicy\UnitTest\Condition;
 
 use PHPUnit\Framework\TestCase;
 
@@ -25,33 +25,33 @@ class InConditionTest extends TestCase
     public function testSingleCondition()
     {
         // Assert that left operand is in the array of values
-        $this->assertTrue(self::$condition->evaluate([
+        $this->assertTrue($this->evaluate([
             "In" => [
                 "a" => ["b", "c", "a"]
             ]
-        ], []));
+        ]));
 
         // Assert that left operand is in the array of values with the same type
-        $this->assertTrue(self::$condition->evaluate([
+        $this->assertTrue($this->evaluate([
             "In" => [
                 "5" => ["b", 5, "a"]
             ]
-        ], []));
+        ]));
 
         // Assert that left operand is not in the array of values
-        $this->assertFalse(self::$condition->evaluate([
+        $this->assertFalse($this->evaluate([
             "In" => [
                 "d" => ["b", "c", "a"]
             ]
-        ], []));
+        ]));
 
         // Assert that left operand is not in the array of values because of the
         // type mismatch
-        $this->assertFalse(self::$condition->evaluate([
+        $this->assertFalse($this->evaluate([
             "In" => [
                 "5" => ["b", "5", "a"]
             ]
-        ], []));
+        ]));
     }
 
     /**
@@ -65,23 +65,23 @@ class InConditionTest extends TestCase
     public function testMultipleConditionsWithOrOperator()
     {
         // Assert that at least one condition has match
-        $this->assertTrue(self::$condition->evaluate([
+        $this->assertTrue($this->evaluate([
             "In" => [
                 "Operator" => "OR",
                 "hello"    => ["nope", "world"],
                 "world"    => ["world", "trust"]
             ]
-        ], []));
+        ]));
 
         // Assert that there are no matches in all conditions
-        $this->assertFalse(self::$condition->evaluate([
+        $this->assertFalse($this->evaluate([
             "In" => [
                 "Operator" => "OR",
                 "hello"    => ["nope", "world"],
                 "world"    => ["this", "testing"],
                 "testing"  => [1, 2]
             ]
-        ], []));
+        ]));
     }
 
     /**
@@ -95,20 +95,20 @@ class InConditionTest extends TestCase
     public function testMultipleConditionsWithAndOperator()
     {
         // Assert that at all conditions have match
-        $this->assertTrue(self::$condition->evaluate([
+        $this->assertTrue($this->evaluate([
             "In" => [
                 "nope" => ["nope", "world"],
                 "world" => [1, "world"]
             ]
-        ], []));
+        ]));
 
         // Assert that at least one condition has no match
-        $this->assertFalse(self::$condition->evaluate([
+        $this->assertFalse($this->evaluate([
             "In" => [
                 "nope"  => ["nope", "world"],
                 "hello" => ["a", "world"]
             ]
-        ], []));
+        ]));
     }
 
 }

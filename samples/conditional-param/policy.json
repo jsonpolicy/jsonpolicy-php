@@ -5,7 +5,7 @@
             "Value": "https://staging-myapi.mydomain.io",
             "Condition": {
                 "Equals": {
-                    "(*int)${ENV.SHLVL}": 0
+                    "(*int)${ENV.SHLVL}": 1
                 }
             }
         },

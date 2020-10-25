@@ -7,25 +7,15 @@
  * LICENSE file that was distributed with this source code.
  */
 
-namespace JsonPolicy\Core;
+namespace JsonPolicy\Manager;
 
 /**
- * Conditions parser and evaluator
+ * Conditions manager
  *
  * @version 0.0.1
  */
-class Condition
+class ConditionManager
 {
-
-    /**
-     * Parent policy parser
-     *
-     * @var Parser
-     *
-     * @access private
-     * @version 0.0.1
-     */
-    private $_parser;
 
     /**
      * Map between condition type and method that evaluates the
@@ -62,24 +52,22 @@ class Condition
      * @access public
      * @version 0.0.1
      */
-    public function __construct(Parser $parser, array $map = [])
+    public function __construct(array $map = [])
     {
-        $this->_parser = $parser;
-        $this->_map    = array_merge($this->_map, $map);
+        $this->_map = array_merge($this->_map, $map);
     }
 
     /**
      * Evaluate the group of conditions based on type
      *
      * @param array $conditions List of conditions
-     * @param array $context    Context
      *
      * @return boolean
      *
      * @access public
      * @version 0.0.1
      */
-    public function evaluate($conditions, array $context)
+    public function evaluate($conditions)
     {
         $result   = null;
         $operator = $this->_determineConditionOperator($conditions);
@@ -96,14 +84,10 @@ class Condition
                 $group_operator = $this->_determineConditionOperator($group);
 
                 // Evaluating group
-                $group_res = call_user_func(
-                    $callback, $group, $context, $group_operator
-                );
+                $group_res = call_user_func($callback, $group, $group_operator);
 
                 $result = $this->_compute($result, $group_res, $operator);
             } else {
-                $this->_parser->log("Warning: Unsupported condition type {$type}");
-
                 $result = false;
             }
         }
@@ -115,7 +99,6 @@ class Condition
      * Evaluate group of BETWEEN conditions
      *
      * @param array  $conditions
-     * @param array  $context
      * @param string $operator
      *
      * @return boolean
@@ -124,11 +107,11 @@ class Condition
      * @version 0.0.1
      */
     protected function evaluateBetweenConditions(
-        $conditions, array $context, $operator = 'AND'
+        $conditions, $operator = 'AND'
     ) {
         $result = null;
 
-        foreach ($this->prepareConditions($conditions, $context) as $cnd) {
+        foreach ($conditions as $cnd) {
             $sub_result = null;
 
             // Convert the right operand into the array of array to cover
@@ -160,7 +143,6 @@ class Condition
      * The values have to be identical
      *
      * @param array  $conditions
-     * @param array  $context
      * @param string $operator
      *
      * @return boolean
@@ -169,11 +151,11 @@ class Condition
      * @version 0.0.1
      */
     protected function evaluateEqualsConditions(
-        $conditions, array $context, $operator = 'AND'
+        $conditions, $operator = 'AND'
     ) {
         $result = null;
 
-        foreach ($this->prepareConditions($conditions, $context) as $cnd) {
+        foreach ($conditions as $cnd) {
             $sub_result = null;
 
             foreach($cnd['right'] as $value) {
@@ -192,7 +174,6 @@ class Condition
      * Evaluate group of NOT EQUALs conditions
      *
      * @param array  $conditions
-     * @param array  $context
      * @param string $operator
      *
      * @return boolean
@@ -201,16 +182,15 @@ class Condition
      * @version 0.0.1
      */
     protected function evaluateNotEqualsConditions(
-        $conditions, array $context, $operator = 'AND'
+        $conditions, $operator = 'AND'
     ) {
-        return !$this->evaluateEqualsConditions($conditions, $context, $operator);
+        return !$this->evaluateEqualsConditions($conditions, $operator);
     }
 
     /**
      * Evaluate group of GREATER THEN conditions
      *
      * @param array  $conditions
-     * @param array  $context
      * @param string $operator
      *
      * @return boolean
@@ -219,11 +199,11 @@ class Condition
      * @version 0.0.1
      */
     protected function evaluateGreaterConditions(
-        $conditions, array $context, $operator = 'AND'
+        $conditions, $operator = 'AND'
     ) {
         $result = null;
 
-        foreach ($this->prepareConditions($conditions, $context) as $cnd) {
+        foreach ($conditions as $cnd) {
             $sub_result = null;
 
             foreach($cnd['right'] as $value) {
@@ -242,7 +222,6 @@ class Condition
      * Evaluate group of LESS THEN conditions
      *
      * @param array  $conditions
-     * @param array  $context
      * @param string $operator
      *
      * @return boolean
@@ -251,11 +230,11 @@ class Condition
      * @version 0.0.1
      */
     protected function evaluateLessConditions(
-        $conditions, array $context, $operator = 'AND'
+        $conditions, $operator = 'AND'
     ) {
         $result = null;
 
-        foreach ($this->prepareConditions($conditions, $context) as $cnd) {
+        foreach ($conditions as $cnd) {
             $sub_result = null;
 
             foreach($cnd['right'] as $value) {
@@ -274,7 +253,6 @@ class Condition
      * Evaluate group of GREATER OR EQUALS THEN conditions
      *
      * @param array  $conditions
-     * @param array  $context
      * @param string $operator
      *
      * @return boolean
@@ -283,11 +261,11 @@ class Condition
      * @version 0.0.1
      */
     protected function evaluateGreaterOrEqualsConditions(
-        $conditions, array $context, $operator = 'AND'
+        $conditions, $operator = 'AND'
     ) {
         $result = null;
 
-        foreach ($this->prepareConditions($conditions, $context) as $cnd) {
+        foreach ($conditions as $cnd) {
             $sub_result = null;
 
             foreach($cnd['right'] as $value) {
@@ -306,7 +284,6 @@ class Condition
      * Evaluate group of LESS OR EQUALS THEN conditions
      *
      * @param array  $conditions
-     * @param array  $context
      * @param string $operator
      *
      * @return boolean
@@ -315,11 +292,11 @@ class Condition
      * @version 0.0.1
      */
     protected function evaluateLessOrEqualsConditions(
-        $conditions, array $context, $operator = 'AND'
+        $conditions, $operator = 'AND'
     ) {
         $result = null;
 
-        foreach ($this->prepareConditions($conditions, $context) as $cnd) {
+        foreach ($conditions as $cnd) {
             $sub_result = null;
 
             foreach($cnd['right'] as $value) {
@@ -338,7 +315,6 @@ class Condition
      * Evaluate group of IN conditions
      *
      * @param array  $conditions
-     * @param array  $context
      * @param string $operator
      *
      * @return boolean
@@ -347,11 +323,11 @@ class Condition
      * @version 0.0.1
      */
     protected function evaluateInConditions(
-        $conditions, array $context, $operator = 'AND'
+        $conditions, $operator = 'AND'
     ) {
         $result = null;
 
-        foreach ($this->prepareConditions($conditions, $context) as $cnd) {
+        foreach ($conditions as $cnd) {
             $result = $this->_compute(
                 $result, in_array($cnd['left'], $cnd['right'], true), $operator
             );
@@ -364,7 +340,6 @@ class Condition
      * Evaluate group of NOT IN conditions
      *
      * @param array  $conditions
-     * @param array  $context
      * @param string $operator
      *
      * @return boolean
@@ -373,11 +348,11 @@ class Condition
      * @version 0.0.1
      */
     protected function evaluateNotInConditions(
-        $conditions, array $context, $operator = 'AND'
+        $conditions, $operator = 'AND'
     ) {
         $result = null;
 
-        foreach ($this->prepareConditions($conditions, $context) as $cnd) {
+        foreach ($conditions as $cnd) {
             $result = $this->_compute(
                 $result, !in_array($cnd['left'], $cnd['right'], true), $operator
             );
@@ -390,7 +365,6 @@ class Condition
      * Evaluate group of LIKE conditions
      *
      * @param array  $conditions
-     * @param array  $context
      * @param string $operator
      *
      * @return boolean
@@ -399,11 +373,11 @@ class Condition
      * @version 0.0.1
      */
     protected function evaluateLikeConditions(
-        $conditions, array $context, $operator = 'AND'
+        $conditions, $operator = 'AND'
     ) {
         $result = null;
 
-        foreach ($this->prepareConditions($conditions, $context) as $cnd) {
+        foreach ($conditions as $cnd) {
             $sub_result = null;
 
             foreach($cnd['right'] as $value) {
@@ -428,7 +402,6 @@ class Condition
      * Evaluate group of NOT LIKE conditions
      *
      * @param array  $conditions
-     * @param array  $context
      * @param string $operator
      *
      * @return boolean
@@ -437,11 +410,11 @@ class Condition
      * @version 0.0.1
      */
     protected function evaluateNotLikeConditions(
-        $conditions, array $context, $operator = 'AND'
+        $conditions, $operator = 'AND'
     ) {
         $result = null;
 
-        foreach ($this->prepareConditions($conditions, $context) as $cnd) {
+        foreach ($conditions as $cnd) {
             $sub_result = null;
 
             foreach($cnd['right'] as $value) {
@@ -466,7 +439,6 @@ class Condition
      * Evaluate group of REGEX conditions
      *
      * @param array  $conditions
-     * @param array  $context
      * @param string $operator
      *
      * @return boolean
@@ -475,11 +447,11 @@ class Condition
      * @version 0.0.1
      */
     protected function evaluateRegexConditions(
-        $conditions, array $context, $operator = 'AND'
+        $conditions, $operator = 'AND'
     ) {
         $result = null;
 
-        foreach ($this->prepareConditions($conditions, $context) as $cnd) {
+        foreach ($conditions as $cnd) {
             $sub_result = null;
 
             foreach($cnd['right'] as $regex) {
@@ -498,72 +470,6 @@ class Condition
         }
 
         return $result;
-    }
-
-    /**
-     * Prepare conditions by replacing all defined tokens
-     *
-     * @param array $conditions
-     * @param array $context
-     *
-     * @return array
-     *
-     * @access protected
-     * @version 0.0.1
-     */
-    protected function prepareConditions($conditions, array $context)
-    {
-        $result = array();
-
-        if (is_array($conditions)) {
-            foreach ($conditions as $l => $r) {
-                $right_operand = $this->_parseExpression($r, $context);
-
-                if (!is_iterable($right_operand)) {
-                    $right_operand = array($right_operand);
-                }
-
-                $result[] = array(
-                    'left'  => $this->_parseExpression($l, $context),
-                    'right' => $right_operand
-                );
-            }
-        }
-
-        return $result;
-    }
-
-    /**
-     * Parse condition and try to replace all defined tokens
-     *
-     * @param mixed $exp     Part of the condition (either left or right)
-     * @param array $context Context
-     *
-     * @return mixed Prepared part of the condition or false on failure
-     *
-     * @access private
-     * @version 0.0.1
-     */
-    private function _parseExpression($exp, array $context)
-    {
-        if (is_scalar($exp)) {
-            if (preg_match_all('/(\$\{[^}]+\})/', $exp, $match)) {
-                $exp = $this->_parser->getMarkerParser()->evaluate(
-                    $exp, $match[1], $context
-                );
-            }
-
-            // Perform type casting if necessary
-            $exp = $this->_parser->getTypecastParser()->cast($exp);
-        } elseif (is_array($exp) || is_object($exp)) {
-            foreach ($exp as &$value) {
-                $value = $this->_parseExpression($value, $context);
-            }
-        } elseif (is_null($exp) === false) {
-            $exp = false;
-        }
-
-        return $exp;
     }
 
     /**

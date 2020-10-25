@@ -13,7 +13,7 @@
             ],
             "Condition": {
                 "LessOrEquals": {
-                    "${Car.price}": 30000
+                    "(*int)${Car.price}": 30000
                 }
             }
         }

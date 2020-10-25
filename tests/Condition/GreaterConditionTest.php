@@ -1,6 +1,6 @@
 <?php
 
-namespace JSONPolicy\UnitTest\Core\Condition;
+namespace JSONPolicy\UnitTest\Condition;
 
 use PHPUnit\Framework\TestCase;
 
@@ -25,32 +25,32 @@ class GreaterConditionTest extends TestCase
     public function testSingleConditionOneValue()
     {
         // Assert that the left operand is greater than the right
-        $this->assertTrue(self::$condition->evaluate([
+        $this->assertTrue($this->evaluate([
             "Greater" => [
                 "D" => "A"
             ]
-        ], []));
+        ]));
 
         // Assert that the left operand is not greater than the right
-        $this->assertFalse(self::$condition->evaluate([
+        $this->assertFalse($this->evaluate([
             "Greater" => [
                 "15" => 20
             ]
-        ], []));
+        ]));
 
         // Assert that values are equal so can't be greater
-        $this->assertFalse(self::$condition->evaluate([
+        $this->assertFalse($this->evaluate([
             "Greater" => [
                 "5" => 5
             ]
-        ], []));
+        ]));
 
         // Assert that numeric values are equal despite the difference in types
-        $this->assertFalse(self::$condition->evaluate([
+        $this->assertFalse($this->evaluate([
             "Greater" => [
                 "5" => "5"
             ]
-        ], []));
+        ]));
     }
 
     /**
@@ -64,18 +64,18 @@ class GreaterConditionTest extends TestCase
     public function testSingleConditionMultipleValues()
     {
         // Assert that left operand is greater than at least one value
-        $this->assertTrue(self::$condition->evaluate([
+        $this->assertTrue($this->evaluate([
             "Greater" => [
                 "2020-10-01" => ["2020-11-01", "2020-09-17"]
             ]
-        ], []));
+        ]));
 
         // Assert that left operand is not greater than all the values
-        $this->assertFalse(self::$condition->evaluate([
+        $this->assertFalse($this->evaluate([
             "Greater" => [
                 "16" => ["20", 30, "21"]
             ]
-        ], []));
+        ]));
     }
 
     /**
@@ -89,23 +89,23 @@ class GreaterConditionTest extends TestCase
     public function testMultipleConditionsMixedRightOperandWithOrOperator()
     {
         // Assert that at least in one condition the left operand is greater
-        $this->assertTrue(self::$condition->evaluate([
+        $this->assertTrue($this->evaluate([
             "Greater" => [
                 "Operator"   => "OR",
                 "A"          => ["B", "C"],
                 "2020-01-01" => "2019-10-01"
             ]
-        ], []));
+        ]));
 
         // Assert that in all the conditions, the left operand is less then right
-        $this->assertFalse(self::$condition->evaluate([
+        $this->assertFalse($this->evaluate([
             "Greater" => [
                 "Operator" => "OR",
                 "A"        => ["B", "C"],
                 "5"        => 15,
                 "2020"     => [2021, 2022]
             ]
-        ], []));
+        ]));
     }
 
     /**
@@ -119,20 +119,20 @@ class GreaterConditionTest extends TestCase
     public function testMultipleConditionsMixedRightOperandWithAndOperator()
     {
         // Assert that in all conditions the left operand is greater
-        $this->assertTrue(self::$condition->evaluate([
+        $this->assertTrue($this->evaluate([
             "Greater" => [
                 "Z"  => ["A", "B"],
                 "20" => "10"
             ]
-        ], []));
+        ]));
 
         // Assert that at at least in one condition the left operand is less
-        $this->assertFalse(self::$condition->evaluate([
+        $this->assertFalse($this->evaluate([
             "Greater" => [
                 "Z"  => ["A", "B"],
                 "20" => 30
             ]
-        ], []));
+        ]));
     }
 
 }

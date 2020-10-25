@@ -7,23 +7,12 @@
  * LICENSE file that was distributed with this source code.
  */
 
-namespace JsonPolicy\Core;
+namespace JsonPolicy\Manager;
 
-use DateTime,
-    DateTimeZone;
+use JsonPolicy\Core\Context;
 
-class Marker
+class MarkerManager
 {
-
-    /**
-     * Parent policy parser
-     *
-     * @var Parser
-     *
-     * @access private
-     * @version 0.0.1
-     */
-    private $_parser;
 
     /**
      * Literal map token's type to the executable method that returns actual value
@@ -34,7 +23,6 @@ class Marker
      * @version 0.0.1
      */
     private $_map = array(
-        'IDENTITY' => __CLASS__ . '::getIdentityValue',
         'DATETIME' => __CLASS__ . '::getDatetime',
         'ARGS'     => __CLASS__ . '::getContextArgValue',
         'ENV'      => __CLASS__ . '::getEnvVar',
@@ -43,65 +31,26 @@ class Marker
     /**
      * Construct the marker parser
      *
-     * @param Parser $parser Parent policy parser
-     * @param array  $map    Collection of additional markers
+     * @param array $map Collection of additional markers
      *
      * @return void
      *
      * @access public
      * @version 0.0.1
      */
-    public function __construct(Parser $parser, array $map = [])
+    public function __construct(array $map = [])
     {
-        $this->_parser = $parser;
-        $this->_map    = array_merge($this->_map, $map);
+        $this->_map = array_merge($this->_map, $map);
     }
 
-    /**
-     * Evaluate collection of tokens and replace them with values
-     *
-     * @param string $part    String with tokens
-     * @param array  $tokens  Extracted token
-     * @param array  $context Context
-     *
-     * @return string
-     *
-     * @access public
-     * @version 0.0.1
-     */
-    public function evaluate($part, array $tokens, array $context = [])
+    public function getValue($source, $xpath, Context $context)
     {
-        foreach ($tokens as $token) {
-            $val  = $this->getTokenValue($token, $context);
-            $part = str_replace(
-                $token,
-                (is_scalar($val) || is_null($val) ? $val : json_encode($val)),
-                $part
+        if ($source === $context->resource_alias) {
+            $value = self::_getValueByXPath($context, 'resource.' . $xpath);
+        } else if (isset($this->_map[$source])) {
+            $value = call_user_func(
+                $this->_map[$source], $xpath, $context
             );
-        }
-
-        return $part;
-    }
-
-    /**
-     * Get token value
-     *
-     * @param string $token
-     * @param array  $context
-     *
-     * @return mixed
-     *
-     * @access public
-     * @version 0.0.1
-     */
-    public function getTokenValue($token, array $context = [])
-    {
-        $parts = explode('.', preg_replace('/^\$\{([^}]+)\}$/', '${1}', $token), 2);
-
-        if ($parts[0] === $context['Alias']) {
-            $value = self::_getValueByXPath($context, 'Resource.' . $parts[1]);
-        } elseif (isset($this->_map[$parts[0]])) {
-            $value = call_user_func($this->_map[$parts[0]], $parts[1], $context);
         } else {
             $value = null;
         }
@@ -110,35 +59,19 @@ class Marker
     }
 
     /**
-     * Get value from the identity object
-     *
-     * @param string $prop
-     * @param array  $context
-     *
-     * @return mixed
-     *
-     * @access protected
-     * @version 0.0.1
-     */
-    protected static function getIdentityValue($prop, array $context)
-    {
-        return self::_getValueByXPath($context['Manager']->getIdentity(), $prop);
-    }
-
-    /**
      * Get value from the context args
      *
-     * @param string $prop
-     * @param array  $context
+     * @param string  $prop
+     * @param Context $context
      *
      * @return mixed
      *
      * @access protected
      * @version 0.0.1
      */
-    protected static function getContextArgValue($prop, array $context)
+    protected static function getContextArgValue($prop, Context $context)
     {
-        return self::_getValueByXPath($context, 'Args.' . $prop);
+        return self::_getValueByXPath($context, 'args.' . $prop);
     }
 
     /**
@@ -153,7 +86,7 @@ class Marker
      */
     protected static function getDatetime($format)
     {
-        return (new DateTime('now', new DateTimeZone('UTC')))->format($format);
+        return (new \DateTime('now', new \DateTimeZone('UTC')))->format($format);
     }
 
     /**
@@ -191,7 +124,7 @@ class Marker
             str_replace(
                 array('["', '[', '"]', ']', '..'), '.', $xpath
             ),
-            '\s.'
+            ' .'
         );
 
         foreach(explode('.', $path) as $l) {

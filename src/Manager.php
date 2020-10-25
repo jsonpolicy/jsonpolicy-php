@@ -9,7 +9,12 @@
 
 namespace JsonPolicy;
 
-use JsonPolicy\Core\Parser;
+use JsonPolicy\Core\Context,
+    JsonPolicy\Parser\PolicyParser,
+    JsonPolicy\Manager\MarkerManager,
+    JsonPolicy\Parser\ExpressionParser,
+    JsonPolicy\Manager\TypecastManager,
+    JsonPolicy\Manager\ConditionManager;
 
 /**
  * Main policy manager
@@ -18,20 +23,6 @@ use JsonPolicy\Core\Parser;
  */
 class Manager
 {
-
-    /**
-     * Debug mode
-     *
-     * @version 0.0.1
-     */
-    const DEBUG_MODE = 'debug';
-
-    /**
-     * Production mode (default)
-     *
-     * @version 0.0.1
-     */
-    const PROD_MODE = 'prod';
 
     /**
      * Single instance of itself
@@ -57,16 +48,6 @@ class Manager
     );
 
     /**
-     * Current identity
-     *
-     * @var object
-     *
-     * @access private
-     * @version 0.0.1
-     */
-    private $_identity;
-
-    /**
      * Policy manager settings
      *
      * @var array
@@ -77,24 +58,54 @@ class Manager
     private $_settings = [];
 
     /**
-     * Policy parser
+     * Policy manager default context
      *
-     * @var Core\Parser
+     * @var JsonPolicy\Core\Context
      *
      * @access private
      * @version 0.0.1
      */
-    private $_parser;
+    private $_context = null;
 
     /**
-     * Debug logs
+     * Marker manager
+     *
+     * @var JsonPolicy\Manager\MarkerManager
+     *
+     * @access private
+     * @version 0.0.1
+     */
+    private $_marker_manager = null;
+
+    /**
+     * Typecast manager
+     *
+     * @var JsonPolicy\Manager\TypecastManager
+     *
+     * @access private
+     * @version 0.0.1
+     */
+    private $_typecast_manager = null;
+
+    /**
+     * Condition manager
+     *
+     * @var JsonPolicy\Manager\ConditionManager
+     *
+     * @access private
+     * @version 0.0.1
+     */
+    private $_condition_manager = null;
+
+    /**
+     * Parsed policy tree
      *
      * @var array
      *
-     * @access private
+     * @access protected
      * @version 0.0.1
      */
-    private $_logs = [];
+    private $_tree = [];
 
     /**
      * Bootstrap constructor
@@ -110,23 +121,15 @@ class Manager
      */
     protected function __construct(array $settings = [])
     {
-        if (empty($settings['identity'])) {
-            $this->_identity = (object) [];
-        } elseif (is_a($settings['identity'], 'Closure')) {
-            $this->_identity = call_user_func($settings['identity'], $settings);
-        } else {
-            $this->_identity = $settings['identity'];
+        // If there are any additional stemming pairs, merge them with the default
+        if (isset($settings['effect_stems']) && is_array($settings['effect_stems'])) {
+            $this->_stemming = array_merge(
+                $this->_stemming,
+                $settings['effect_stems']
+            );
         }
 
         $this->_settings = $settings;
-
-        // If there are any additional stemming pairs, merge them with the default
-        if (isset($settings['effect_stemming']) && is_iterable($settings['effect_stemming'])) {
-            $this->_stemming = array_merge(
-                $this->_stemming,
-                $settings['effect_stemming']
-            );
-        }
     }
 
     /**
@@ -147,13 +150,11 @@ class Manager
     {
         $result = null;
 
-        $this->startLog("Invoked \"{$name}\" method with params", $args);
-
         // We are calling method like isAllowed, isAttached or isDeniedTo
         if (strpos($name, 'is') === 0) {
-            $resource = array_shift($args);
-            $action   = array_shift($args);
-            $params   = array_shift($args);
+            $resource     = array_shift($args);
+            $action       = array_shift($args);
+            $context_args = array_shift($args);
 
             if (strpos($name, 'To') === (strlen($name) - 2)) {
                 $effect = substr($name, 2, -2);
@@ -162,10 +163,18 @@ class Manager
             }
 
             $result = $this->is(
-                $resource, $this->_stemEffect($effect), $action, $params
+                $resource, $this->_stemEffect($effect), $action, $context_args
             );
-        } else {
-            $this->log('Error: Unsupported method. It should start with "is".');
+        } elseif ($name === 'getMarkerValue') {
+            $result = call_user_func_array(
+                [$this->getMarkerManager(), 'getValue'],
+                $args
+            );
+        } elseif ($name === 'cast') {
+            $result = call_user_func_array(
+                [$this->getTypecastManager(), 'cast'],
+                $args
+            );
         }
 
         return $result;
@@ -193,19 +202,6 @@ class Manager
     }
 
     /**
-     * Get current identity
-     *
-     * @return object
-     *
-     * @access public
-     * @version 0.0.1
-     */
-    public function getIdentity()
-    {
-        return $this->_identity;
-    }
-
-    /**
      * Get policy param
      *
      * @param mixed $key
@@ -218,71 +214,61 @@ class Manager
      */
     public function getParam($key, $args = [])
     {
-        $this->startLog("Fetching \"{$key}\" param");
+        $result = null;
 
-        return $this->_parser->getParam($key, array(
-            'Manager'  => $this,
-            'Args'     => $args
-        ));
-    }
+        if (isset($this->_tree['Param'][$key])) {
+            $param = $this->getBestCandidate(
+                $this->_tree['Param'][$key],
+                new Context([
+                    'manager' => $this,
+                    'args'    => $args
+                ])
+            );
 
-    /**
-     * Wiping previous logs and insert the first log
-     *
-     * @param string $msg
-     * @param mixed  $args
-     *
-     * @return void
-     *
-     * @access public
-     * @version 0.0.1
-     */
-    public function startLog($msg, $args = null)
-    {
-        $this->_logs = [];
-        $this->log($msg, $args);
-    }
-
-    /**
-     * Store log to the debugging log
-     *
-     * If manage runs in the "debug" mode, persist that log
-     *
-     * @param string $msg
-     * @param mixed  $args
-     *
-     * @return void
-     *
-     * @access public
-     * @version 0.0.1
-     */
-    public function log($msg, $args = null)
-    {
-        $mode = $this->getSetting('mode', false);
-
-        if ($mode === self::DEBUG_MODE) {
-            if (is_null($args)) {
-                $this->_logs[] = $msg;
-            } else {
-                $this->_logs[] = array(
-                    'msg'  => $msg,
-                    'args' => $args
-                );
+            if (!is_null($param)) {
+                $result = $param['Value'];
             }
         }
+
+        return $result;
+    }
+
+    protected function getMarkerManager()
+    {
+        if (is_null($this->_marker_manager)) {
+            $this->_marker_manager = new MarkerManager(
+                $this->_getSettingIterator('markers')
+            );
+        }
+
+        return $this->_marker_manager;
+    }
+
+    protected function getTypecastManager()
+    {
+        if (is_null($this->_typecast_manager)) {
+            $this->_typecast_manager = new TypecastManager(
+                $this->_getSettingIterator('typecasts')
+            );
+        }
+
+        return $this->_typecast_manager;
     }
 
     /**
-     * Get all logs
+     * Undocumented function
      *
-     * @return array
-     *
-     * @access public
-     * @version 0.0.1
+     * @return JsonPolicy\Core\Condition
      */
-    public function getLogs()
+    protected function getConditionManager()
     {
-        return $this->_logs;
+        if (is_null($this->_condition_manager)) {
+            $this->_condition_manager = new ConditionManager(
+                $this->_getSettingIterator('conditions')
+            );
+        }
+
+        return $this->_condition_manager;
     }
 
     /**
@@ -306,25 +292,34 @@ class Manager
         // Get resource alias
         $alias = $this->getResourceName($resource);
 
-        // Prepare the context
-        $context = array(
-            'Manager'  => $this,
-            'Resource' => $resource,
-            'Alias'    => $alias,
-            'Args'     => $args
-        );
+        // Determine contextual arguments
+        if (empty($args)) {
+            $args = $this->_getSettingIterator('context_args');
+        }
 
-        // Log the context
-        $this->log('Resource alias', $alias);
-        $this->log('Effect', $effect);
+        // Prepare the context
+        $context = new Context([
+            'manager'        => $this,
+            'resource'       => $resource,
+            'resource_alias' => $alias,
+            'args'           => $args
+        ]);
 
         $xpath    = $alias . (is_null($action) ? '' : "::{$action}");
         $wildcard = "{$alias}::*";
 
-        if ($this->_parser->isDefined($xpath)) {
-            $result = $this->_parser->is($xpath, $effect, $context);
-        } elseif ($this->_parser->isDefined($wildcard)) {
-            $result = $this->_parser->is($wildcard, $effect, $context);
+        if ($this->_tree['Statement'][$xpath]) {
+            $stm = $this->getBestCandidate(
+                $this->_tree['Statement'][$xpath], $context
+            );
+        } elseif ($this->_tree['Statement'][$wildcard]) {
+            $stm = $this->getBestCandidate(
+                $this->_tree['Statement'][$wildcard], $context
+            );
+        }
+
+        if (!is_null($stm)) {
+            $result = ($stm['Effect'] === $effect);
         }
 
         return $result;
@@ -340,7 +335,50 @@ class Manager
      */
     protected function initialize()
     {
-        $this->_parser = new Parser($this->_getSettingIterator('repository'), $this);
+        $this->_tree = PolicyParser::parse(
+            $this->_getSettingIterator('repository'),
+            new Context([
+                'manager' => $this,
+                'args'    => $this->_getSettingIterator('context_args')
+            ])
+        );
+    }
+
+    /**
+     * Based on multiple competing statements/params, get the best candidate
+     *
+     * @param array   $match
+     * @param Context $context
+     *
+     * @return array|null
+     *
+     * @access protected
+     * @version 0.0.1
+     */
+    protected function getBestCandidate($match, Context $context)
+    {
+        $candidate = null;
+
+        if (is_array($match) && isset($match[0])) {
+            // Take in consideration ONLY currently applicable statements or param
+            // and select either the last one or the one that is enforced
+            $enforced = false;
+
+            foreach($match as $stm) {
+                if ($this->_isApplicable($stm, $context)) {
+                    if (!empty($stm['Enforce'])) {
+                        $candidate = $stm;
+                        $enforced  = true;
+                    } elseif ($enforced === false) {
+                        $candidate = $stm;
+                    }
+                }
+            }
+        } else if ($this->_isApplicable($match, $context)) {
+            $candidate = $match;
+        }
+
+        return $candidate;
     }
 
     /**
@@ -366,6 +404,49 @@ class Manager
         }
 
         return $name;
+    }
+
+    /**
+     * Check if policy statement or param is applicable
+     *
+     * @param array   $obj
+     * @param Context $context
+     *
+     * @return boolean
+     *
+     * @access private
+     * @version 0.0.1
+     */
+    private function _isApplicable($obj, Context $context)
+    {
+        $result = true;
+
+        if (!empty($obj['Condition']) && is_iterable($obj['Condition'])) {
+            $conditions = $obj['Condition'];
+
+            foreach ($conditions as $i => &$group) {
+                if ($i !== 'Operator') {
+                    foreach ($group as $j => &$row) {
+                        if ($j !== 'Operator') {
+                            $row = array(
+                                // Left expression
+                                'left' => ExpressionParser::convertedToValue(
+                                    $row['left'], $context
+                                ),
+                                // Right expression
+                                'right' => (array)ExpressionParser::convertedToValue(
+                                    $row['right'], $context
+                                )
+                            );
+                        }
+                    }
+                }
+            }
+
+            $result = $this->getConditionManager()->evaluate($conditions);
+        }
+
+        return $result;
     }
 
     /**

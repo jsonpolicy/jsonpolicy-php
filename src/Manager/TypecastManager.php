@@ -7,28 +7,15 @@
  * LICENSE file that was distributed with this source code.
  */
 
-namespace JsonPolicy\Core;
-
-use DateTime,
-    DateTimeZone;
+namespace JsonPolicy\Manager;
 
 /**
- * Typecast parser
+ * Typecast manager
  *
  * @version 0.0.1
  */
-class Typecast
+class TypecastManager
 {
-
-    /**
-     * Parent policy parser
-     *
-     * @var Parser
-     *
-     * @access private
-     * @version 0.0.1
-     */
-    private $_parser;
 
     /**
      * Collection of additional types
@@ -43,45 +30,33 @@ class Typecast
     /**
      * Construct the marker parser
      *
-     * @param Parser $parser Parent policy parser
-     * @param array  $map    Collection of additional markers
+     * @param array $map Collection of additional markers
      *
      * @return void
      *
      * @access public
      * @version 0.0.1
      */
-    public function __construct(Parser $parser, array $map = [])
+    public function __construct(array $map = [])
     {
-        $this->_parser = $parser;
-        $this->_map    = array_merge($this->_map, $map);
+        $this->_map = array_merge($this->_map, $map);
     }
 
     /**
      * Execute type casting
      *
-     * @param string $expression
+     * @param mixed  $value
+     * @param string $type
      *
      * @return mixed
      *
      * @access public
      * @version 0.0.1
      */
-    public function cast($expression)
+    public function cast($value, $type = 'string')
     {
-        $regex = '/^\(\*([a-z\d\-_]+)\)(.*)/i';
-
-        // Note! It make no sense to have multiple type casting for one expression
-        // due to the fact that they all would have to be concatenated as a string
-
-        // If there is type casting, perform it
-        if (preg_match( $regex, $expression, $scale)) {
-            $expression = $this->_typecast($scale[2], $scale[1]);
-        }
-
-        return $expression;
+        return $this->_typecast($value, $type);
     }
-
 
     /**
      * Cast value to specific type
@@ -109,29 +84,39 @@ class Typecast
                 $value = (int) $value;
                 break;
 
+            case 'float':
+                $value = (float) $value;
+                break;
+
             case 'boolean':
             case 'bool':
                 $value = filter_var($value, FILTER_VALIDATE_BOOLEAN);
                 break;
 
-            case 'array':
+            case 'json':
                 $value = json_decode($value, true);
                 break;
 
+            case 'array':
+                $value = (array) $value;
+                break;
+
             case 'null':
-                $value = ($value === '' ? null : $value);
+                if (is_scalar($value)) {
+                    $value = (is_null($value) || $value === ''  ? null : $value);
+                } else if (is_array($value)) {
+                    $value = (count($value) === 0 ? null : $value);
+                }
                 break;
 
             case 'date':
-                $value = new DateTime($value, new DateTimeZone('UTC'));
+                $value = new \DateTime($value, new \DateTimeZone('UTC'));
                 break;
 
             default:
                 if (isset($this->_map[$type])) {
                     if (is_callable($this->_map[$type])) {
                         $value = call_user_func($this->_map[$type], $value);
-                    } else {
-                        throw new \Error("The {$type} typecast is not callable");
                     }
                 }
                 break;
