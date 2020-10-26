@@ -91,7 +91,7 @@ The policy that defines all the conditions can be something like this:
 The above policy does not allow agents to sell or even see cars that are above $30k.
 
 
-## Contributing to <project_name>
+## Contributing To The Project
 To contribute to JSON Policy, follow these steps:
 
 1. Fork this repository.
