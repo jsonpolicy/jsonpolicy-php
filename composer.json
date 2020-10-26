@@ -1,7 +1,7 @@
 {
     "name": "jsonpolicy/jsonpolicy-php",
     "type": "library",
-    "description": "PHP Library for ACaC",
+    "description": "JSON Policy - Distributed Rule Engine for PHP",
     "keywords": [
         "json policy",
         "access controls",

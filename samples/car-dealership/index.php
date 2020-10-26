@@ -4,9 +4,9 @@ require dirname(__DIR__) . '/../vendor/autoload.php';
 require __DIR__ . '/dealership.php';
 require __DIR__ . '/car.php';
 
-use JsonPolicy\Manager;
+use JsonPolicy\Manager as JsonPolicyManager;
 
-$manager = Manager::bootstrap([
+$manager = JsonPolicyManager::bootstrap([
     'repository' => [
         file_get_contents(__DIR__  . '/policy.json')
     ]
