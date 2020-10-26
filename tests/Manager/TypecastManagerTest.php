@@ -29,7 +29,11 @@ class TypecastManagerTest extends TestCase
      */
     public static function setUpBeforeClass(): void
     {
-        self::$manager = new TypecastManager;
+        self::$manager = new TypecastManager([
+            'md5' => function($value) {
+                return md5($value);
+            }
+        ]);
     }
 
     /**
@@ -91,7 +95,8 @@ class TypecastManagerTest extends TestCase
             ['["hello", "world"]', 'json', 'is_array', ["hello", "world"]],
             ['hello', 'array', 'is_array', ["hello"]],
             ['', 'null', 'is_null', null],
-            [null, 'null', 'is_null', null]
+            [null, 'null', 'is_null', null],
+            ['test', 'md5', 'is_string', '098f6bcd4621d373cade4e832627b4f6']
         ];
     }
 

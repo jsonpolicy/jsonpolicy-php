@@ -20,5 +20,8 @@
         <testsuite name="Manager">
             <directory suffix="Test.php">./tests/Manager</directory>
         </testsuite>
+        <testsuite name="MainManager">
+            <file>./tests/ManagerTest.php</file>
+        </testsuite>
     </testsuites>
 </phpunit>

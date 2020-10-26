@@ -11,6 +11,11 @@ namespace JsonPolicy\Parser;
 
 use JsonPolicy\Core\Context;
 
+/**
+ * Condition parser
+ *
+ * @version 0.0.1
+ */
 class ConditionParser
 {
 

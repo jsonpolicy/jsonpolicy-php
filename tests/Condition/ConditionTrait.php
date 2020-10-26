@@ -36,7 +36,32 @@ trait ConditionTrait
      */
     public static function setUpBeforeClass(): void
     {
-        self::$manager = new ConditionManager;
+        self::$manager = new ConditionManager([
+            // The "Similar" condition evaluates to true if two text at least
+            // 60% similar
+            'Similar' => function($group, $operator) {
+                $result = null;
+
+                foreach ($group as $cnd) {
+                    $sub_result = null;
+
+                    foreach($cnd['right'] as $value) {
+                        $percentage = 0;
+                        similar_text($cnd['left'], $value, $percentage);
+
+                        $sub_result = ConditionManager::compute(
+                            $sub_result, ($percentage > 60), 'OR'
+                        );
+                    }
+
+                    $result = ConditionManager::compute(
+                        $result, $sub_result, $operator
+                    );
+                }
+
+                return $result;
+            }
+        ]);
     }
 
     /**
@@ -61,11 +86,11 @@ trait ConditionTrait
                 if ($l !== 'Operator') {
                     $row = array(
                         // Left expression
-                        'left' => ExpressionParser::convertedToValue(
+                        'left' => ExpressionParser::convertToValue(
                             $row['left'], $context
                         ),
                         // Right expression
-                        'right' => (array) ExpressionParser::convertedToValue(
+                        'right' => (array) ExpressionParser::convertToValue(
                             $row['right'], $context
                         )
                     );

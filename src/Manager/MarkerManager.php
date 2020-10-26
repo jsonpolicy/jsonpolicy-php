@@ -11,6 +11,11 @@ namespace JsonPolicy\Manager;
 
 use JsonPolicy\Core\Context;
 
+/**
+ * Marker manager
+ *
+ * @version 0.0.1
+ */
 class MarkerManager
 {
 
@@ -43,16 +48,24 @@ class MarkerManager
         $this->_map = array_merge($this->_map, $map);
     }
 
+    /**
+     * Get value from provided source and path
+     *
+     * @param string  $source
+     * @param string  $xpath
+     * @param Context $context
+     *
+     * @return mixed
+     *
+     * @access public
+     * @version 0.0.1
+     */
     public function getValue($source, $xpath, Context $context)
     {
-        if ($source === $context->resource_alias) {
-            $value = self::_getValueByXPath($context, 'resource.' . $xpath);
-        } else if (isset($this->_map[$source])) {
-            $value = call_user_func(
-                $this->_map[$source], $xpath, $context
-            );
+       if (isset($this->_map[$source])) {
+            $value = call_user_func($this->_map[$source], $xpath, $context);
         } else {
-            $value = null;
+            $value = self::getValueByXPath($context, 'resource.' . $xpath);
         }
 
         return $value;
@@ -71,7 +84,7 @@ class MarkerManager
      */
     protected static function getContextArgValue($prop, Context $context)
     {
-        return self::_getValueByXPath($context, 'args.' . $prop);
+        return self::getValueByXPath($context, 'args.' . $prop);
     }
 
     /**
@@ -114,17 +127,17 @@ class MarkerManager
      *
      * @return mixed
      *
-     * @access private
+     * @access public
      * @version 0.0.1
      */
-    private static function _getValueByXPath($obj, $xpath)
+    public static function getValueByXPath($obj, $xpath)
     {
         $value = $obj;
         $path  = trim(
             str_replace(
                 array('["', '[', '"]', ']', '..'), '.', $xpath
             ),
-            ' .'
+            ' .' // white space is important!
         );
 
         foreach(explode('.', $path) as $l) {

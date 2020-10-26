@@ -10,7 +10,7 @@ $me = new User(1, 'me');
 
 $manager = Manager::bootstrap([
     'repository' => [
-        json_decode(file_get_contents(__DIR__  . '/policy.json'), true)
+        file_get_contents(__DIR__  . '/policy.json')
     ],
     'markers' => [
         'IDENTITY' => function($prop) {

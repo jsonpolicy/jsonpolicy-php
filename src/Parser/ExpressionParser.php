@@ -12,6 +12,11 @@ namespace JsonPolicy\Parser;
 use JsonPolicy\Core\Entity,
     JsonPolicy\Core\Context;
 
+/**
+ * Expression parser
+ *
+ * @version 0.0.1
+ */
 class ExpressionParser
 {
 
@@ -58,7 +63,7 @@ class ExpressionParser
     {
         $parsed = self::parse($expression);
 
-        return self::convertedToValue($parsed, $context);
+        return self::convertToValue($parsed, $context);
     }
 
     /**
@@ -72,13 +77,13 @@ class ExpressionParser
      * @access public
      * @version 0.0.1
      */
-    public static function convertedToValue($entity, Context $context)
+    public static function convertToValue($entity, Context $context)
     {
         if (is_array($entity)) {
             $response = [];
 
             foreach($entity as $e) {
-                $response[] = self::convertedToValue($e, $context);
+                $response[] = self::convertToValue($e, $context);
             }
         } else {
             $response = $entity->convertToValue($context);

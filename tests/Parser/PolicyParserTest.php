@@ -26,7 +26,7 @@ class PolicyParserTest extends TestCase
     public function testSingleStatementWithOneResource()
     {
         $policies = [
-            json_decode('{"Statement":{"Effect":"allow","Resource":"article"}}', true)
+            '{"Statement":{"Effect":"allow","Resource":"article"}}'
         ];
 
         $this->assertSame([
@@ -58,7 +58,7 @@ class PolicyParserTest extends TestCase
     public function testSingleStatementWithOneResourceFewActions()
     {
         $policies = [
-            json_decode('{"Statement":{"Effect":"deny","Resource":"article","Action":["read","write"]}}', true)
+            '{"Statement":{"Effect":"deny","Resource":"article","Action":["read","write"]}}'
         ];
 
         $this->assertSame([
@@ -92,7 +92,7 @@ class PolicyParserTest extends TestCase
     public function testSingleStatementWithResourceMapping()
     {
         $policies = [
-            json_decode('{"Statement":{"Effect":"deny","Resource":"RecordId:%d => (*json)[1,2]","Action":["delete"]}}', true)
+            '{"Statement":{"Effect":"deny","Resource":"RecordId:%d => (*json)[1,2]","Action":["delete"]}}'
         ];
 
         $this->assertSame([
@@ -105,7 +105,7 @@ class PolicyParserTest extends TestCase
                 ]
             ]
         ], PolicyParser::parse($policies, new Context([
-            'manager' => Manager::bootstrap([], true)
+            'manager' => Manager::bootstrap([])
         ])));
     }
 
@@ -131,7 +131,7 @@ class PolicyParserTest extends TestCase
     public function testMultipleSimpleStatements()
     {
         $policies = [
-            json_decode('{"Statement":[{"Effect":"deny","Resource":"Order:PO0901"},{"Effect":"deny","Resource":"Order:PO0902"}]}', true)
+            '{"Statement":[{"Effect":"deny","Resource":"Order:PO0901"},{"Effect":"deny","Resource":"Order:PO0902"}]}'
         ];
 
         $this->assertSame([
@@ -169,7 +169,7 @@ class PolicyParserTest extends TestCase
     public function testMultipleCompetingStatements()
     {
         $policies = [
-            json_decode('{"Statement":[{"Effect":"deny","Resource":"Order:PO0901"},{"Effect":"allow","Enforce":true,"Resource":"Order:PO0901"}]}', true)
+            '{"Statement":[{"Effect":"deny","Resource":"Order:PO0901"},{"Effect":"allow","Enforce":true,"Resource":"Order:PO0901"}]}'
         ];
 
         $this->assertSame([
@@ -203,7 +203,7 @@ class PolicyParserTest extends TestCase
     public function testSingleParam()
     {
         $policies = [
-            json_decode('{"Param":{"Key":"unittest","Value":"test"}}', true)
+            '{"Param":{"Key":"unittest","Value":"test"}}'
         ];
 
         $this->assertSame([
@@ -231,7 +231,7 @@ class PolicyParserTest extends TestCase
     public function testSingleParamWithMapping()
     {
         $policies = [
-            json_decode('{"Param":{"Key":"endpoint:%s => (*array)${ARGS.environments}","Value":"test"}}', true)
+            '{"Param":{"Key":"endpoint:%s => (*array)${ARGS.environments}","Value":"test"}}'
         ];
 
         $this->assertSame([
@@ -244,7 +244,7 @@ class PolicyParserTest extends TestCase
                 ]
             ]
         ], PolicyParser::parse($policies, new Context([
-            'manager' => Manager::bootstrap([], true),
+            'manager' => Manager::bootstrap([]),
             'args'    => [
                 'environments' => ['staging', 'production']
             ]
@@ -273,7 +273,7 @@ class PolicyParserTest extends TestCase
     public function testMultipleSimpleParams()
     {
         $policies = [
-            json_decode('{"Param":[{"Key":"setting-a","Value":"a"},{"Key":"setting-b","Value":"b"}]}', true)
+            '{"Param":[{"Key":"setting-a","Value":"a"},{"Key":"setting-b","Value":"b"}]}'
         ];
 
         $this->assertSame([
@@ -310,7 +310,7 @@ class PolicyParserTest extends TestCase
     public function testMultipleCompetingParams()
     {
         $policies = [
-            json_decode('{"Param":[{"Key":"endpoint","Value":"/testing"},{"Key":"endpoint","Value":"/production"}]}', true)
+            '{"Param":[{"Key":"endpoint","Value":"/testing"},{"Key":"endpoint","Value":"/production"}]}'
         ];
 
         $this->assertSame([

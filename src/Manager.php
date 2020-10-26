@@ -25,16 +25,6 @@ class Manager
 {
 
     /**
-     * Single instance of itself
-     *
-     * @var JsonPolicy\Manager
-     *
-     * @access private
-     * @version 0.0.1
-     */
-    private static $_instance = null;
-
-    /**
      * Effect stemming map
      *
      * @var array
@@ -56,16 +46,6 @@ class Manager
      * @version 0.0.1
      */
     private $_settings = [];
-
-    /**
-     * Policy manager default context
-     *
-     * @var JsonPolicy\Core\Context
-     *
-     * @access private
-     * @version 0.0.1
-     */
-    private $_context = null;
 
     /**
      * Marker manager
@@ -119,7 +99,7 @@ class Manager
      * @access protected
      * @version 0.0.1
      */
-    protected function __construct(array $settings = [])
+    protected function __construct(array $settings)
     {
         // If there are any additional stemming pairs, merge them with the default
         if (isset($settings['effect_stems']) && is_array($settings['effect_stems'])) {
@@ -165,16 +145,6 @@ class Manager
             $result = $this->is(
                 $resource, $this->_stemEffect($effect), $action, $context_args
             );
-        } elseif ($name === 'getMarkerValue') {
-            $result = call_user_func_array(
-                [$this->getMarkerManager(), 'getValue'],
-                $args
-            );
-        } elseif ($name === 'cast') {
-            $result = call_user_func_array(
-                [$this->getTypecastManager(), 'cast'],
-                $args
-            );
         }
 
         return $result;
@@ -219,9 +189,8 @@ class Manager
         if (isset($this->_tree['Param'][$key])) {
             $param = $this->getBestCandidate(
                 $this->_tree['Param'][$key],
-                new Context([
-                    'manager' => $this,
-                    'args'    => $args
+                $this->getContext([
+                    'args' => $args
                 ])
             );
 
@@ -233,22 +202,38 @@ class Manager
         return $result;
     }
 
-    protected function getMarkerManager()
+    /**
+     * Get marker manager
+     *
+     * @return JsonPolicy\Manager\MarkerManager
+     *
+     * @access public
+     * @version 0.0.1
+     */
+    public function getMarkerManager()
     {
         if (is_null($this->_marker_manager)) {
             $this->_marker_manager = new MarkerManager(
-                $this->_getSettingIterator('markers')
+                $this->getSetting('custom_markers')
             );
         }
 
         return $this->_marker_manager;
     }
 
-    protected function getTypecastManager()
+    /**
+     * Get typecast manager
+     *
+     * @return JsonPolicy\Manager\TypecastManager
+     *
+     * @access public
+     * @version 0.0.1
+     */
+    public function getTypecastManager()
     {
         if (is_null($this->_typecast_manager)) {
             $this->_typecast_manager = new TypecastManager(
-                $this->_getSettingIterator('typecasts')
+                $this->getSetting('custom_types')
             );
         }
 
@@ -256,19 +241,41 @@ class Manager
     }
 
     /**
-     * Undocumented function
+     * Get condition manager
      *
-     * @return JsonPolicy\Core\Condition
+     * @return JsonPolicy\Manager\ConditionManager
+     *
+     * @access public
+     * @version 0.0.1
      */
-    protected function getConditionManager()
+    public function getConditionManager()
     {
         if (is_null($this->_condition_manager)) {
             $this->_condition_manager = new ConditionManager(
-                $this->_getSettingIterator('conditions')
+                $this->getSetting('custom_conditions')
             );
         }
 
         return $this->_condition_manager;
+    }
+
+    /**
+     * Get context
+     *
+     * @return Context
+     *
+     * @access public
+     * @version 0.0.1
+     */
+    public function getContext(array $properties = [])
+    {
+        return new Context(array_merge(
+            [
+                'manager' => $this
+            ],
+            $this->getSetting('context'),
+            $properties
+        ));
     }
 
     /**
@@ -290,31 +297,28 @@ class Manager
         $result = null;
 
         // Get resource alias
-        $alias = $this->getResourceName($resource);
-
-        // Determine contextual arguments
-        if (empty($args)) {
-            $args = $this->_getSettingIterator('context_args');
-        }
+        $res_name = $this->getResourceName($resource);
 
         // Prepare the context
-        $context = new Context([
-            'manager'        => $this,
-            'resource'       => $resource,
-            'resource_alias' => $alias,
-            'args'           => $args
+        $context = $this->getContext([
+            'resource' => $resource,
+            'args'     => $args
         ]);
 
-        $xpath    = $alias . (is_null($action) ? '' : "::{$action}");
-        $wildcard = "{$alias}::*";
+        $res_id   = $res_name . (is_null($action) ? '' : "::{$action}");
+        $wildcard = "{$res_name}::*";
 
-        if ($this->_tree['Statement'][$xpath]) {
+        if ($this->_tree['Statement'][$res_id]) {
             $stm = $this->getBestCandidate(
-                $this->_tree['Statement'][$xpath], $context
+                $this->_tree['Statement'][$res_id], $context
             );
         } elseif ($this->_tree['Statement'][$wildcard]) {
             $stm = $this->getBestCandidate(
                 $this->_tree['Statement'][$wildcard], $context
+            );
+        } elseif ($this->_tree['Statement']['*::*']) {
+            $stm = $this->getBestCandidate(
+                $this->_tree['Statement']['*::*'], $context
             );
         }
 
@@ -336,11 +340,8 @@ class Manager
     protected function initialize()
     {
         $this->_tree = PolicyParser::parse(
-            $this->_getSettingIterator('repository'),
-            new Context([
-                'manager' => $this,
-                'args'    => $this->_getSettingIterator('context_args')
-            ])
+            $this->getSetting('repository'),
+            $this->getContext()
         );
     }
 
@@ -395,7 +396,7 @@ class Manager
     {
         $name = null;
 
-        foreach($this->_getSettingIterator('resources') as $callback) {
+        foreach($this->getSetting('custom_resources') as $callback) {
             $name = call_user_func($callback, $name, $resource, $this);
         }
 
@@ -430,11 +431,11 @@ class Manager
                         if ($j !== 'Operator') {
                             $row = array(
                                 // Left expression
-                                'left' => ExpressionParser::convertedToValue(
+                                'left' => ExpressionParser::convertToValue(
                                     $row['left'], $context
                                 ),
                                 // Right expression
-                                'right' => (array)ExpressionParser::convertedToValue(
+                                'right' => (array)ExpressionParser::convertToValue(
                                     $row['right'], $context
                                 )
                             );
@@ -508,8 +509,7 @@ class Manager
     /**
      * Bootstrap the framework
      *
-     * @param array   $options Manager options
-     * @param boolean $force   Force to reinit if already initialized
+     * @param array $options Manager options
      *
      * @return JsonPolicy\Manager
      *
@@ -517,17 +517,15 @@ class Manager
      * @static
      * @version 0.0.1
      */
-    public static function bootstrap(array $options = [], bool $force = false): Manager
+    public static function bootstrap(array $options = []): Manager
     {
-        if (is_null(self::$_instance) || $force) {
-            self::$_instance = new self($options);
+        $instance = new self($options);
 
-            // Initialize the repository and policies that are applicable to the
-            // current identity
-            self::$_instance->initialize();
-        }
+        // Initialize the repository and policies that are applicable to the
+        // current identity
+        $instance->initialize();
 
-        return self::$_instance;
+        return $instance;
     }
 
 }

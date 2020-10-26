@@ -35,10 +35,14 @@ class PolicyParser
         $tree = [];
 
         foreach ($policies as $policy) {
-            self::indexPolicy([
-                'Statement' => self::_getArrayOfArrays($policy, 'Statement'),
-                'Param'     => self::_getArrayOfArrays($policy, 'Param')
-            ], $tree, $context);
+            $decoded = json_decode($policy, true);
+
+            if ($decoded) {
+                self::indexPolicy([
+                    'Statement' => self::_getArrayOfArrays($decoded, 'Statement'),
+                    'Param'     => self::_getArrayOfArrays($decoded, 'Param')
+                ], $tree, $context);
+            }
         }
 
         return $tree;

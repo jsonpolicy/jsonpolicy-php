@@ -74,10 +74,10 @@ class ConditionManager
 
         foreach ($conditions as $type => $group) {
             if (isset($this->_map[$type])) {
-                if (method_exists($this, $this->_map[$type])) {
-                    $callback = [$this, $this->_map[$type]];
-                } else {
-                    $callback = $this->_map[$type];
+                $callback = $this->_map[$type];
+
+                if (is_string($callback) && method_exists($this, $callback)) {
+                    $callback = [$this, $callback];
                 }
 
                 // Determining logical operator within group
@@ -86,7 +86,7 @@ class ConditionManager
                 // Evaluating group
                 $group_res = call_user_func($callback, $group, $group_operator);
 
-                $result = $this->_compute($result, $group_res, $operator);
+                $result = $this->compute($result, $group_res, $operator);
             } else {
                 $result = false;
             }
@@ -126,12 +126,12 @@ class ConditionManager
                 $min = (is_array($subset) ? array_shift($subset) : $subset);
                 $max = (is_array($subset) ? end($subset) : $subset);
 
-                $sub_result = $this->_compute(
+                $sub_result = $this->compute(
                     $sub_result, ($cnd['left'] >= $min && $cnd['left'] <= $max), 'OR'
                 );
             }
 
-            $result = $this->_compute($result, $sub_result, $operator);
+            $result = $this->compute($result, $sub_result, $operator);
         }
 
         return $result;
@@ -159,12 +159,12 @@ class ConditionManager
             $sub_result = null;
 
             foreach($cnd['right'] as $value) {
-                $sub_result = $this->_compute(
+                $sub_result = $this->compute(
                     $sub_result, ($cnd['left'] === $value), 'OR'
                 );
             }
 
-            $result = $this->_compute($result, $sub_result, $operator);
+            $result = $this->compute($result, $sub_result, $operator);
         }
 
         return $result;
@@ -207,12 +207,12 @@ class ConditionManager
             $sub_result = null;
 
             foreach($cnd['right'] as $value) {
-                $sub_result = $this->_compute(
+                $sub_result = $this->compute(
                     $sub_result, ($cnd['left'] > $value), 'OR'
                 );
             }
 
-            $result = $this->_compute($result, $sub_result, $operator);
+            $result = $this->compute($result, $sub_result, $operator);
         }
 
         return $result;
@@ -238,12 +238,12 @@ class ConditionManager
             $sub_result = null;
 
             foreach($cnd['right'] as $value) {
-                $sub_result = $this->_compute(
+                $sub_result = $this->compute(
                     $sub_result, ($cnd['left'] < $value), 'OR'
                 );
             }
 
-            $result = $this->_compute($result, $sub_result, $operator);
+            $result = $this->compute($result, $sub_result, $operator);
         }
 
         return $result;
@@ -269,12 +269,12 @@ class ConditionManager
             $sub_result = null;
 
             foreach($cnd['right'] as $value) {
-                $sub_result = $this->_compute(
+                $sub_result = $this->compute(
                     $sub_result, ($cnd['left'] >= $value), 'OR'
                 );
             }
 
-            $result = $this->_compute($result, $sub_result, $operator);
+            $result = $this->compute($result, $sub_result, $operator);
         }
 
         return $result;
@@ -300,12 +300,12 @@ class ConditionManager
             $sub_result = null;
 
             foreach($cnd['right'] as $value) {
-                $sub_result = $this->_compute(
+                $sub_result = $this->compute(
                     $sub_result, ($cnd['left'] <= $value), 'OR'
                 );
             }
 
-            $result = $this->_compute($result, $sub_result, $operator);
+            $result = $this->compute($result, $sub_result, $operator);
         }
 
         return $result;
@@ -328,7 +328,7 @@ class ConditionManager
         $result = null;
 
         foreach ($conditions as $cnd) {
-            $result = $this->_compute(
+            $result = $this->compute(
                 $result, in_array($cnd['left'], $cnd['right'], true), $operator
             );
         }
@@ -353,7 +353,7 @@ class ConditionManager
         $result = null;
 
         foreach ($conditions as $cnd) {
-            $result = $this->_compute(
+            $result = $this->compute(
                 $result, !in_array($cnd['left'], $cnd['right'], true), $operator
             );
         }
@@ -385,14 +385,14 @@ class ConditionManager
                     array('\*', '\#'), array('.*', '\\#'), preg_quote($value)
                 );
 
-                $sub_result = $this->_compute(
+                $sub_result = $this->compute(
                     $sub_result,
                     preg_match('#^' . $sub . '$#ms', $cnd['left']) === 1,
                     'OR'
                 );
             }
 
-            $result = $this->_compute($result, $sub_result, $operator);
+            $result = $this->compute($result, $sub_result, $operator);
         }
 
         return $result;
@@ -422,14 +422,14 @@ class ConditionManager
                     array('\*', '\#'), array('.*', '\\#'), preg_quote($value)
                 );
 
-                $sub_result = $this->_compute(
+                $sub_result = $this->compute(
                     $sub_result,
                     preg_match('#^' . $sub . '$#ms', $cnd['left']) !== 1,
                     'OR'
                 );
             }
 
-            $result = $this->_compute($result, $sub_result, $operator);
+            $result = $this->compute($result, $sub_result, $operator);
         }
 
         return $result;
@@ -461,12 +461,12 @@ class ConditionManager
                     $regex = "/{$regex}/";
                 }
 
-                $sub_result = $this->_compute(
+                $sub_result = $this->compute(
                     $sub_result, preg_match($regex, $cnd['left']) === 1, 'OR'
                 );
             }
 
-            $result = $this->_compute($result, $sub_result, $operator);
+            $result = $this->compute($result, $sub_result, $operator);
         }
 
         return $result;
@@ -509,10 +509,10 @@ class ConditionManager
      *
      * @return boolean|null
      *
-     * @access private
+     * @access public
      * @version 0.0.1
      */
-    private function _compute($left, $right, $operator)
+    public static function compute($left, $right, $operator)
     {
         $result = null;
 
