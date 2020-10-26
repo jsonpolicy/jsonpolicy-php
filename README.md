@@ -20,7 +20,7 @@ composer require jsonpolicy/jsonpolicy-php
 
 To install manually, download this repository and move all the files inside the `src` folder to the desired destination. Then simply register the autoload function as following
 
-```
+```php
 spl_autoload_register(function ($class_name) {
     if (strpos($class_name, 'JSONPolicy') === 0) {
         $filepath  = '<your-desired-folder>';
@@ -39,7 +39,7 @@ Let's imagine that you build an application for the car dealership, where based 
 
 Here is how your code may look like:
 
-```
+```php
 use JsonPolicy\Manager as JsonPolicyManager;
 
 $manager = JsonPolicyManager::bootstrap([
@@ -64,7 +64,7 @@ foreach ($dealership as $car) {
 ```
 The policy that defines all the conditions can be something like this:
 
-```
+```json
 {
     "Statement": [
         {
