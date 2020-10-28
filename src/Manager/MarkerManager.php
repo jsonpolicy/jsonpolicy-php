@@ -25,12 +25,16 @@ class MarkerManager
      * @var array
      *
      * @access private
-     * @version 0.0.1
+     * @version 0.0.2
      */
     private $_map = array(
-        'DATETIME' => __CLASS__ . '::getDatetime',
-        'ARGS'     => __CLASS__ . '::getContextArgValue',
-        'ENV'      => __CLASS__ . '::getEnvVar',
+        'ARGS'         => __CLASS__ . '::getContextArgValue',
+        'DATETIME'     => __CLASS__ . '::getDatetime',
+        'ENV'          => __CLASS__ . '::getEnvVar',
+        'HTTP_COOKIE'  => __CLASS__ . '::getHttpCookie',
+        'HTTP_GET'     => __CLASS__ . '::getHttpGet',
+        'HTTP_POST'    => __CLASS__ . '::getHttpPost',
+        'HTTP_REQUEST' => __CLASS__ . '::getHttpRequest',
     );
 
     /**
@@ -115,6 +119,66 @@ class MarkerManager
     protected static function getEnvVar($prop)
     {
         return getenv($prop);
+    }
+
+    /**
+     * Get value from $_COOKIE super-global
+     *
+     * @param string $prop
+     *
+     * @return mixed
+     *
+     * @access protected
+     * @version 0.0.2
+     */
+    protected static function getHttpCookie($prop)
+    {
+        return self::getValueByXPath($_COOKIE, $prop);
+    }
+
+    /**
+     * Get value from $_GET super-global
+     *
+     * @param string $prop
+     *
+     * @return mixed
+     *
+     * @access protected
+     * @version 0.0.2
+     */
+    protected static function getHttpGet($prop)
+    {
+        return self::getValueByXPath($_GET, $prop);
+    }
+
+    /**
+     * Get value from $_POST super-global
+     *
+     * @param string $prop
+     *
+     * @return mixed
+     *
+     * @access protected
+     * @version 0.0.2
+     */
+    protected static function getHttpPost($prop)
+    {
+        return self::getValueByXPath($_POST, $prop);
+    }
+
+    /**
+     * Get value from $_REQUEST super-global
+     *
+     * @param string $prop
+     *
+     * @return mixed
+     *
+     * @access protected
+     * @version 0.0.2
+     */
+    protected static function getHttpRequest($prop)
+    {
+        return self::getValueByXPath($_REQUEST, $prop);
     }
 
     /**

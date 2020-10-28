@@ -85,6 +85,74 @@ class MarkerManagerTest extends TestCase
     }
 
     /**
+     * Test HTTP_COOKIE marker resolution
+     *
+     * @access public
+     * @version 0.0.2
+     */
+    public function testHttpCookieMarker()
+    {
+        $_COOKIE['testing'] = 1;
+
+        $this->assertEquals(
+            1, self::$manager->getValue('HTTP_COOKIE', 'testing', new Context)
+        );
+
+        unset($_COOKIE['testing']);
+    }
+
+    /**
+     * Test HTTP_GET marker resolution
+     *
+     * @access public
+     * @version 0.0.2
+     */
+    public function testHttpGetMarker()
+    {
+        $_GET['testing'] = 'a';
+
+        $this->assertEquals(
+            'a', self::$manager->getValue('HTTP_GET', 'testing', new Context)
+        );
+
+        unset($_GET['testing']);
+    }
+
+    /**
+     * Test HTTP_POST marker resolution
+     *
+     * @access public
+     * @version 0.0.2
+     */
+    public function testHttpPostMarker()
+    {
+        $_POST['testing'] = 'a';
+
+        $this->assertEquals(
+            'a', self::$manager->getValue('HTTP_POST', 'testing', new Context)
+        );
+
+        unset($_POST['testing']);
+    }
+
+    /**
+     * Test HTTP_REQUEST marker resolution
+     *
+     * @access public
+     * @version 0.0.2
+     */
+    public function testHttpRequestMarker()
+    {
+        $_REQUEST['testing'] = 'a';
+
+        $this->assertEquals(
+            'a', self::$manager->getValue('HTTP_REQUEST', 'testing', new Context)
+        );
+
+        unset($_REQUEST['testing']);
+    }
+
+    /**
      * Test default fallback to resource property
      *
      * @access public
