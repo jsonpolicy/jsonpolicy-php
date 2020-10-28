@@ -101,14 +101,6 @@ class Manager
      */
     protected function __construct(array $settings)
     {
-        // If there are any additional stemming pairs, merge them with the default
-        if (isset($settings['effect_stems']) && is_array($settings['effect_stems'])) {
-            $this->_stemming = array_merge(
-                $this->_stemming,
-                $settings['effect_stems']
-            );
-        }
-
         $this->_settings = $settings;
     }
 
@@ -132,15 +124,16 @@ class Manager
 
         // We are calling method like isAllowed, isAttached or isDeniedTo
         if (strpos($name, 'is') === 0) {
-            $resource     = array_shift($args);
-            $action       = array_shift($args);
-            $context_args = array_shift($args);
+            $resource = array_shift($args);
 
             if (strpos($name, 'To') === (strlen($name) - 2)) {
                 $effect = substr($name, 2, -2);
+                $action = array_shift($args);
             } else {
                 $effect = substr($name, 2);
             }
+
+            $context_args = array_shift($args);
 
             $result = $this->is(
                 $resource, $this->_stemEffect($effect), $action, $context_args
@@ -269,10 +262,14 @@ class Manager
      */
     public function getContext(array $properties = [])
     {
+        // If no args provided explicitly, then fallback to the default context
+        // that can be defined during Policy Manager initialization
+        if (empty($properties['args'])) {
+            unset($properties['args']);
+        }
+
         return new Context(array_merge(
-            [
-                'manager' => $this
-            ],
+            [ 'manager' => $this ],
             $this->getSetting('context'),
             $properties
         ));
@@ -339,8 +336,15 @@ class Manager
      */
     protected function initialize()
     {
+        // If there are any additional stemming pairs, merge them with the default
+        $this->_stemming = array_merge(
+            $this->_stemming,
+            $this->getSetting('effect_stems')
+        );
+
+        // Parse the collection of policies
         $this->_tree = PolicyParser::parse(
-            $this->getSetting('repository'),
+            $this->getSetting('policies'),
             $this->getContext()
         );
     }

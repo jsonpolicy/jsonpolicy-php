@@ -9,10 +9,10 @@ use JsonPolicy\Manager;
 $me = new User(1, 'me');
 
 $manager = Manager::bootstrap([
-    'repository' => [
+    'policies' => [
         file_get_contents(__DIR__  . '/policy.json')
     ],
-    'markers' => [
+    'custom_markers' => [
         'IDENTITY' => function($prop) {
             global $me;
 
@@ -28,7 +28,7 @@ function CanEditUserEntity($entity)
     if ($manager->isAllowedTo($entity, 'edit')) {
         echo "Yes. You can edit the user '{$entity->username}'\n";
     } else {
-        echo "No. Currently you cannot edit the user '{$entity->username}'\n";
+        echo "No. You cannot edit the user '{$entity->username}'\n";
     }
 }
 

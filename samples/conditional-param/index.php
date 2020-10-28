@@ -5,7 +5,7 @@ require dirname(__DIR__) . '/../vendor/autoload.php';
 use JsonPolicy\Manager;
 
 $manager = Manager::bootstrap([
-    'repository' => [
+    'policies' => [
         file_get_contents(__DIR__  . '/policy.json')
     ]
 ]);

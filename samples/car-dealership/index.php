@@ -7,7 +7,7 @@ require __DIR__ . '/car.php';
 use JsonPolicy\Manager as JsonPolicyManager;
 
 $manager = JsonPolicyManager::bootstrap([
-    'repository' => [
+    'policies' => [
         file_get_contents(__DIR__  . '/policy.json')
     ]
 ]);

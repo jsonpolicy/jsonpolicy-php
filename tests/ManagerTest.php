@@ -42,7 +42,7 @@ class ManagerTest extends TestCase
                     return $name;
                 }
             ],
-            'repository' => [
+            'policies' => [
                 '{"Statement":{"Effect":"restrict","Resource":"Application"}}'
             ]
         ]);
@@ -78,7 +78,7 @@ class ManagerTest extends TestCase
                     ], $xpath);
                 }
             ],
-            'repository' => [
+            'policies' => [
                 '{"Statement":{"Effect":"deny","Resource":"stdClass","Action":"purchase","Condition":{"Equals":{"(*int)${USER.id}":1}}}}'
             ]
         ]);
@@ -109,7 +109,7 @@ class ManagerTest extends TestCase
     public function testCompetingStatements()
     {
         $manager = Manager::bootstrap([
-            'repository' => [
+            'policies' => [
                 '{"Statement":[{"Effect":"allow","Enforce":true,"Resource":"stdClass"},{"Effect":"deny","Resource":"stdClass"}]}'
             ]
         ]);
@@ -132,7 +132,7 @@ class ManagerTest extends TestCase
     public function testResourceWildcardStatement()
     {
         $manager = Manager::bootstrap([
-            'repository' => [
+            'policies' => [
                 '{"Statement":{"Effect":"deny","Resource":"*"}}'
             ]
         ]);
@@ -155,7 +155,7 @@ class ManagerTest extends TestCase
     public function testActionWildcardStatement()
     {
         $manager = Manager::bootstrap([
-            'repository' => [
+            'policies' => [
                 '{"Statement":{"Effect":"deny","Resource":"stdClass"}}'
             ]
         ]);
@@ -179,7 +179,7 @@ class ManagerTest extends TestCase
     public function testSimpleParam()
     {
         $manager = Manager::bootstrap([
-            'repository' => [
+            'policies' => [
                 '{"Param":{"Key":"testing","Value":"hello"}}'
             ]
         ]);
@@ -208,7 +208,7 @@ class ManagerTest extends TestCase
     public function testSimpleConditionalParam()
     {
         $manager = Manager::bootstrap([
-            'repository' => [
+            'policies' => [
                 '{"Param":{"Key":"testing","Value":"hello","Condition":{"NotEquals":{"${ARGS.testing}":"hello"}}}}'
             ]
         ]);
@@ -256,7 +256,7 @@ class ManagerTest extends TestCase
     public function testCompetingParams()
     {
         $manager = Manager::bootstrap([
-            'repository' => [
+            'policies' => [
                 '{"Param":[{"Key":"environment","Value":"this is staging","Condition":{"Equals":{"${ARGS.env}":"staging"}}},{"Key":"environment","Value":"this is production","Condition":{"Equals":{"${ARGS.env}":"production"}}}]}'
             ]
         ]);
@@ -283,17 +283,102 @@ class ManagerTest extends TestCase
     public function testGetSetting()
     {
         $manager = Manager::bootstrap([
-            'repository' => [
+            'policies' => [
                 '{}'
             ],
             'custom_prop' => 'a'
         ]);
 
-        $this->assertTrue(is_array($manager->getSetting('repository')));
+        $this->assertTrue(is_array($manager->getSetting('policies')));
         $this->assertTrue(is_array($manager->getSetting('custom_prop')));
         $this->assertEquals('a', $manager->getSetting('custom_prop', false));
         $this->assertNull($manager->getSetting('unknown', false));
         $this->assertCount(0, $manager->getSetting('unknown'));
+    }
+
+    /**
+     * Testing that is<Adjective>() method handles arguments correctly
+     *
+     * Loaded policy:
+     *
+     * {
+     *      "Statement": {
+     *          "Effect": "deny",
+     *          "Resource": "stdClass",
+     *          "Condition": {
+     *              "Equals": {
+     *                  "(*int)${ARGS.testing}": 1
+     *              }
+     *          }
+     *      }
+     * }
+     *
+     * @access public
+     * @version 0.0.2
+     */
+    public function testIsAdjectiveInvocation()
+    {
+        $manager = Manager::bootstrap([
+            'policies' => [
+                '{"Statement":{"Effect":"deny","Resource":"stdClass","Condition":{"Equals":{"(*int)${ARGS.testing}":1}}}}'
+            ]
+        ]);
+
+        $this->assertTrue($manager->isDenied((object)[], [
+            'testing' => 1
+        ]));
+        $this->assertFalse($manager->isAllowed((object)[], [
+            'testing' => 1
+        ]));
+        $this->assertNull($manager->isDenied((object)[], [
+            'testing' => 2
+        ]));
+        $this->assertNull($manager->isAllowed((object)[], [
+            'testing' => 2
+        ]));
+    }
+
+    /**
+     * Testing that is<Adjective>() method handles arguments correctly
+     *
+     * Loaded policy:
+     *
+     * {
+     *      "Statement": {
+     *          "Effect": "deny",
+     *          "Resource": "stdClass",
+     *          "Action": "delete",
+     *          "Condition": {
+     *              "Equals": {
+     *                  "(*int)${ARGS.testing}": 1
+     *              }
+     *          }
+     *      }
+     * }
+     *
+     * @access public
+     * @version 0.0.2
+     */
+    public function testIsAdjectiveToInvocation()
+    {
+        $manager = Manager::bootstrap([
+            'policies' => [
+                '{"Statement":{"Effect":"deny","Resource":"stdClass","Action": "delete","Condition":{"Equals":{"(*int)${ARGS.testing}":1}}}}'
+            ]
+        ]);
+
+        $this->assertTrue($manager->isDeniedTo((object)[], 'delete', [
+            'testing' => 1
+        ]));
+        $this->assertFalse($manager->isAllowedTo((object)[], 'delete', [
+            'testing' => 1
+        ]));
+        $this->assertNull($manager->isDeniedTo((object)[], 'delete', [
+            'testing' => 2
+        ]));
+        $this->assertNull($manager->isAllowedTo((object)[], 'delete', [
+            'testing' => 2
+        ]));
     }
 
 }
