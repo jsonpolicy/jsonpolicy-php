@@ -32,7 +32,7 @@ class Manager
      * @access private
      * @version 0.0.1
      */
-    private $_stemming = array(
+    private $_effects = array(
         'allowed' => 'allow',
         'denied'  => 'deny',
     );
@@ -135,8 +135,22 @@ class Manager
 
             $context_args = array_shift($args);
 
+            // Method overload. If the next argument is boolean, then this indicates
+            // the $default response. Otherwise, the $default is null and whatever is
+            // in the $context_args is considered to be actual inline args
+            if (is_bool($context_args)) {
+                $default      = $context_args;
+                $context_args = array_shift($args);
+            } else {
+                $default = null;
+            }
+
             $result = $this->is(
-                $resource, $this->_stemEffect($effect), $action, $context_args
+                $resource,
+                $this->_stemEffect($effect),
+                $action,
+                $default,
+                $context_args
             );
         }
 
@@ -167,17 +181,18 @@ class Manager
     /**
      * Get policy param
      *
-     * @param mixed $key
-     * @param mixed $args
+     * @param string $key
+     * @param mixed  $default
+     * @param mixed  $args
      *
      * @return mixed
      *
      * @access public
      * @version 0.0.1
      */
-    public function getParam($key, $args = [])
+    public function getParam($key, $default = null, $args = [])
     {
-        $result = null;
+        $result = $default;
 
         if (isset($this->_tree['Param'][$key])) {
             $param = $this->getBestCandidate(
@@ -278,10 +293,11 @@ class Manager
     /**
      * Check if resource and/or action is allowed
      *
-     * @param mixed  $resource Resource name or resource object
-     * @param string $effect   Constraint effect (e.g. allow, deny)
-     * @param string $action   Any specific action upon provided resource
-     * @param mixed  $args     Inline arguments that are added to the context
+     * @param mixed     $resource Resource name or resource object
+     * @param string    $effect   Constraint effect (e.g. allow, deny)
+     * @param string    $action   Any specific action upon provided resource
+     * @param bool|null $default  Default response
+     * @param mixed     $args     Inline arguments that are added to the context
      *
      * @return boolean|null The `null` is returned if there is no applicable statements
      *                      that explicitly define effect
@@ -289,9 +305,9 @@ class Manager
      * @access protected
      * @version 0.0.1
      */
-    protected function is($resource, $effect, $action, $args)
+    protected function is($resource, $effect, $action, $default, $args)
     {
-        $result = null;
+        $result = $default;
 
         // Get resource alias
         $res_name = $this->getResourceName($resource);
@@ -337,9 +353,9 @@ class Manager
     protected function initialize()
     {
         // If there are any additional stemming pairs, merge them with the default
-        $this->_stemming = array_merge(
-            $this->_stemming,
-            $this->getSetting('effect_stems')
+        $this->_effects = array_merge(
+            $this->_effects,
+            $this->getSetting('custom_effects')
         );
 
         // Parse the collection of policies
@@ -404,8 +420,12 @@ class Manager
             $name = call_user_func($callback, $name, $resource, $this);
         }
 
-        if (is_null($name) && is_object($resource)) {
-            $name = get_class($resource);
+        if (is_null($name)) {
+            if (is_object($resource)) {
+                $name = get_class($resource);
+            } elseif (is_scalar($resource)) {
+                $name = $resource;
+            }
         }
 
         return $name;
@@ -507,7 +527,7 @@ class Manager
     {
         $n = strtolower($effect);
 
-        return (isset($this->_stemming[$n]) ? $this->_stemming[$n] : $n);
+        return (isset($this->_effects[$n]) ? $this->_effects[$n] : $n);
     }
 
     /**

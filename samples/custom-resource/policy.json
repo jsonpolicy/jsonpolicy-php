@@ -1,0 +1,6 @@
+{
+    "Statement": {
+        "Effect": "deny",
+        "Resource": "Page:private-portal"
+    }
+}

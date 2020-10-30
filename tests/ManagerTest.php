@@ -27,10 +27,10 @@ class ManagerTest extends TestCase
      * @access public
      * @version 0.0.1
      */
-    public function testCustomStem()
+    public function testCustomEffect()
     {
         $manager = Manager::bootstrap([
-            'effect_stems' => [
+            'custom_effects' => [
                 'restricted' => 'restrict'
             ],
             'custom_resources' => [
@@ -214,12 +214,12 @@ class ManagerTest extends TestCase
         ]);
 
         // The condition makes the param inapplicable
-        $this->assertNull($manager->getParam('testing', [
+        $this->assertNull($manager->getParam('testing', null, [
             'testing' => 'hello'
         ]));
 
         // The condition makes the param applicable
-        $this->assertEquals('hello', $manager->getParam('testing', [
+        $this->assertEquals('hello', $manager->getParam('testing', null, [
             'testing' => 'blah'
         ]));
     }
@@ -261,15 +261,15 @@ class ManagerTest extends TestCase
             ]
         ]);
 
-        $this->assertEquals('this is staging', $manager->getParam('environment', [
+        $this->assertEquals('this is staging', $manager->getParam('environment', null, [
             'env' => 'staging'
         ]));
 
-        $this->assertEquals('this is production', $manager->getParam('environment', [
+        $this->assertEquals('this is production', $manager->getParam('environment', null, [
             'env' => 'production'
         ]));
 
-        $this->assertNull($manager->getParam('environment', [
+        $this->assertNull($manager->getParam('environment', null, [
             'env' => 'local'
         ]));
     }

@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * This file is a part of JsonPolicy project.
+ *
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
+ */
+
+// The main objective in this example is to determine the list of car that can be
+// purchased based on the car price. The policy sets the threshold to $30,000.
+
 require dirname(__DIR__) . '/../vendor/autoload.php';
 require __DIR__ . '/dealership.php';
 require __DIR__ . '/car.php';
@@ -25,7 +35,7 @@ $dealership = new Dealership($stock);
 // identity
 foreach ($dealership as $car) {
     if ($manager->isAllowedTo($car, 'purchase') === true) {
-        echo "You can view or purchase {$car->model} ($car->year)\n";
+        echo "You can view and purchase {$car->model} ($car->year)\n";
     } else {
         echo "You cannot view and purchase {$car->model} ($car->year)\n";
     }

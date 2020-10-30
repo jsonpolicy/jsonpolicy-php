@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * This file is a part of JsonPolicy project.
+ *
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
+ */
+
 require dirname(__DIR__) . '/../vendor/autoload.php';
 
 use JsonPolicy\Manager;
@@ -10,4 +17,7 @@ $manager = Manager::bootstrap([
     ]
 ]);
 
-print_r($manager->getParam('API:endpoint'));
+// Change APP_ENV value to see the difference
+putenv('APP_ENV=2');
+
+echo $manager->getParam('API:endpoint') . "\n";

@@ -84,7 +84,9 @@ class ConditionManager
                 $group_operator = $this->_determineConditionOperator($group);
 
                 // Evaluating group
-                $group_res = call_user_func($callback, $group, $group_operator);
+                $group_res = call_user_func(
+                    $callback, $group, $group_operator, $this
+                );
 
                 $result = $this->compute($result, $group_res, $operator);
             } else {

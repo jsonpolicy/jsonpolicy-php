@@ -33,7 +33,7 @@ class ConditionParser
     {
         foreach($conditions as $type => $group) {
             if ($type !== 'Operator') {
-                $conditions[$type] = self::tokenizeGroup($group, $context);
+                $conditions[$type] = self::tokenizeGroup((array) $group, $context);
             }
         }
 
@@ -43,7 +43,8 @@ class ConditionParser
     /**
      * Tokenize a single condition group
      *
-     * @param array $group
+     * @param array   $group
+     * @param Context $context
      *
      * @return array
      *

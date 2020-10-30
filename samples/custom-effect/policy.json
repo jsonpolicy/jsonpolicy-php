@@ -1,0 +1,31 @@
+{
+    "Statement": [
+        {
+            "Effect": "attach",
+            "Resource": "super-badge",
+            "Condition": {
+                "In": {
+                    "superstar": "(*array)${ARGS.groups}"
+                }
+            }
+        },
+        {
+            "Effect": "attach",
+            "Resource": "advanced-badge",
+            "Condition": {
+                "In": {
+                    "advanced": "(*array)${ARGS.groups}"
+                }
+            }
+        },
+        {
+            "Effect": "attach",
+            "Resource": "smart-badge",
+            "Condition": {
+                "In": {
+                    "smart": "(*array)${ARGS.groups}"
+                }
+            }
+        }
+    ]
+}

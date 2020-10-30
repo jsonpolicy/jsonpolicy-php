@@ -5,7 +5,7 @@
             "Value": "https://staging-myapi.mydomain.io",
             "Condition": {
                 "Equals": {
-                    "(*int)${ENV.SHLVL}": 1
+                    "(*int)${ENV.APP_ENV}": 1
                 }
             }
         },
@@ -14,7 +14,7 @@
             "Value": "https://myapi.mydomain.io",
             "Condition": {
                 "Equals": {
-                    "(*int)${ENV.SHLVL}": 2
+                    "(*int)${ENV.APP_ENV}": 2
                 }
             }
         }

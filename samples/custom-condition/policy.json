@@ -1,0 +1,12 @@
+{
+    "Statement": {
+        "Effect": "allow",
+        "Resource": "backend",
+        "Condition": {
+            "NotEmpty": [
+                "${HTTP_COOKIE.authenticated}",
+                "${HTTP_COOKIE.bypass}"
+            ]
+        }
+    }
+}

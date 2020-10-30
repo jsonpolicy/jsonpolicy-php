@@ -1,11 +1,19 @@
 <?php
 
+/**
+ * This file is a part of JsonPolicy project.
+ *
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
+ */
+
 require dirname(__DIR__) . '/../vendor/autoload.php';
 require __DIR__ . '/user.php';
 require __DIR__ . '/userentity.php';
 
 use JsonPolicy\Manager;
 
+// Defining current user identity object
 $me = new User(1, 'me');
 
 $manager = Manager::bootstrap([
@@ -21,6 +29,13 @@ $manager = Manager::bootstrap([
     ]
 ]);
 
+/**
+ * Checking if current user can edit other user
+ *
+ * @param UserEntity $entity
+ *
+ * @return void
+ */
 function CanEditUserEntity($entity)
 {
     global $manager;

@@ -1,0 +1,12 @@
+{
+    "Statement": {
+        "Effect": "deny",
+        "Resource": "Article",
+        "Action": "publish",
+        "Condition": {
+            "Similar": {
+                "${Article.content}": "(*array)${ARGS.articles}"
+            }
+        }
+    }
+}
