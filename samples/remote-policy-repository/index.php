@@ -14,7 +14,9 @@ use JsonPolicy\Manager as PolicyManager;
 $manager = PolicyManager::bootstrap([
     'policies' => function() {
         return [
-            file_get_contents('http://dev.wordpress/policy.json')
+            file_get_contents(
+                'https://raw.githubusercontent.com/jsonpolicy/jsonpolicy-php/master/samples/remote-policy-repository/policy.json'
+            )
         ];
     }
 ]);
